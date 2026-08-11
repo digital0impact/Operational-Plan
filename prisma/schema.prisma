@@ -1,0 +1,128 @@
+// Prisma schema — منصة الخطة التشغيلية لمدارس التعليم العام
+// المرحلة الحالية: تسجيل المدرسة + تسجيل الدخول + الخطوات 1-4 من معالج الخطة
+// (بيانات المدرسة، مستوى الأداء، مدخلات الإجراء، المراجعة والتأكيد)
+//
+// الكيانات اللاحقة (خارج نطاق هذا الإصدار، انظر خطة المعمار المنشورة):
+// OperationalGoal · KPI · SWOTItem · KeyIssue · InitiativeProgram · ActionItem · Vote · PlanExport
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// مدرسة (Tenant) — تُنشأ عبر رمز تفعيل صادر من الإدارة العامة للتعليم
+model School {
+  id String @id @default(cuid())
+
+  // بيانات المدرسة (النموذج الرسمي، صفحة 2)
+  name                  String
+  unit                  String // الوحدة (المرحلة)
+  schoolSystem          String // نظام المدرسة
+  ministryNumber        String? // الرقم الوزاري
+  studyTime             String? // وقت الدراسة
+  studentsCount         Int?
+  classroomsCount       Int?
+  gender                String // جنس المدرسة
+  buildingType          String? // نوع المبنى
+  educationType         String? // نوع التعليم
+  buildingIndependence  String? // استقلالية المبنى
+  phone                 String?
+  schoolEmail           String?
+  address               String?
+
+  // مستوى الأداء (النموذج الرسمي، صفحة 2)
+  performanceGeneral            String? // مستوى الأداء العام
+  performanceManagement         String? // مستوى الإدارة المدرسية
+  performanceTeachingLearning   String? // مستوى التعليم والتعلم
+  performanceLearningOutcomes   String? // مستوى نواتج التعلم
+  performanceEnvironment        String? // مستوى البيئة المدرسية
+
+  // تتبع تقدم المعالج
+  currentStep       Int       @default(1)
+  step1CompletedAt  DateTime?
+  step2CompletedAt  DateTime?
+  step3CompletedAt  DateTime?
+  step4CompletedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activationCode  ActivationCode?
+  users           User[]
+  procedureInputs ProcedureInput[]
+
+  @@map("schools")
+}
+
+/// رمز تفعيل تصدره الإدارة العامة للتعليم لمدرسة واحدة (SCH-XXXX-XXXX)
+model ActivationCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  used      Boolean   @default(false)
+  issuedFor String? // ملاحظة اختيارية: اسم المدرسة المستهدفة أو الإدارة
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  schoolId String? @unique
+  school   School? @relation(fields: [schoolId], references: [id])
+
+  @@map("activation_codes")
+}
+
+/// مستخدم (مدير مدرسة أو عضو فريق تميز)
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("SCHOOL_MANAGER") // SCHOOL_MANAGER | TEAM_MEMBER | GENERAL_ADMIN
+  createdAt    DateTime @default(now())
+
+  schoolId String?
+  school   School? @relation(fields: [schoolId], references: [id])
+
+  sessions Session[]
+
+  @@map("users")
+}
+
+/// جلسة دخول (كوكي بالتوكن)
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+/// الأهداف الاستراتيجية العشرة — بيانات ثابتة تُزرع مرة واحدة (Seed)، لا تُعدَّل من المدرسة
+model StrategicGoal {
+  id    String @id @default(cuid())
+  order Int    @unique
+  title String
+
+  @@map("strategic_goals")
+}
+
+/// مدخلات الإجراء — قائمة ثابتة من 4 عناصر لكل مدرسة (النموذج الرسمي، صفحة 2)
+model ProcedureInput {
+  id           String   @id @default(cuid())
+  type         String // PERFORMANCE_REPORT | MINISTRY_STRATEGY | ADMIN_PLAN | CORRECTIVE_ACTIONS
+  acknowledged Boolean  @default(false)
+  note         String?
+  updatedAt    DateTime @updatedAt
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, type])
+  @@map("procedure_inputs")
+}

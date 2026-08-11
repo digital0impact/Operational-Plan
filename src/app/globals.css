@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #eef2f1;
+  --surface: #ffffff;
+  --surface-2: #f4f7f6;
+  --ink: #12262a;
+  --muted: #56706e;
+  --border: #cbdad7;
+  --accent: #0f6e63;
+  --accent-ink: #ffffff;
+  --amber: #b6702a;
+  --amber-soft: #f6e6d3;
+  --accent-soft: #e2eeeb;
+  --danger: #b3392c;
+  --danger-soft: #f8e3df;
+  --font-sans: "Tahoma", "Segoe UI", "Noto Kufi Arabic", "Noto Sans Arabic",
+    Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1517;
+    --surface: #12201f;
+    --surface-2: #16302c;
+    --ink: #e8f0ee;
+    --muted: #96aeac;
+    --border: #24403d;
+    --accent: #4fc3ac;
+    --accent-ink: #06211c;
+    --amber: #e7a75f;
+    --amber-soft: #3a2c17;
+    --accent-soft: #12332e;
+    --danger: #e08b7c;
+    --danger-soft: #3a1f1a;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-sans);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
