@@ -147,7 +147,7 @@ export async function loginAction(
   }
 
   await createSession(user.id);
-  redirect("/dashboard");
+  redirect(user.role === "GENERAL_ADMIN" ? "/admin" : "/dashboard");
 }
 
 export async function logoutAction() {

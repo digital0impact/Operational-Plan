@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { hashPassword } from "../src/lib/password";
 
 // الأهداف الاستراتيجية العشرة لوزارة التعليم — كما وردت حرفيًا في
 // "دليل إجراءات عمل مدارس التعليم العام 2025م" (إعداد الخطة التشغيلية، صفحة 3)
@@ -40,6 +41,22 @@ async function main() {
     create: { code: demoCode, issuedFor: "مدرسة تجريبية — للاختبار المحلي" },
   });
   console.log(`رمز التفعيل التجريبي: ${demoCode}`);
+
+  // حساب إدارة عامة تجريبي — لإصدار رموز التفعيل ومتابعة المدارس
+  const adminEmail = "admin@moe.test";
+  const adminPassword = "Admin@12345";
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  if (!existingAdmin) {
+    await prisma.user.create({
+      data: {
+        name: "الإدارة العامة للتعليم",
+        email: adminEmail,
+        passwordHash: await hashPassword(adminPassword),
+        role: "GENERAL_ADMIN",
+      },
+    });
+  }
+  console.log(`حساب الإدارة العامة التجريبي: ${adminEmail} / ${adminPassword}`);
 
   await prisma.$disconnect();
 }

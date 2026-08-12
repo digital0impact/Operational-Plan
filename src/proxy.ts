@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_NAME = "session_token";
-const PROTECTED_PREFIXES = ["/dashboard", "/wizard", "/export"];
+const PROTECTED_PREFIXES = ["/dashboard", "/wizard", "/export", "/admin"];
 const AUTH_PATHS = ["/login", "/register"];
 
 export function proxy(request: NextRequest) {
@@ -25,5 +25,13 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/wizard/:path*", "/export", "/login", "/register"],
+  matcher: [
+    "/dashboard/:path*",
+    "/wizard/:path*",
+    "/export",
+    "/admin",
+    "/admin/:path*",
+    "/login",
+    "/register",
+  ],
 };
