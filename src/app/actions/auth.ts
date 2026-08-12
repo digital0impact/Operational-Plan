@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createSession, destroySession } from "@/lib/session";
+import { generatePublicToken } from "@/lib/tokens";
 import {
   SCHOOL_CLASSIFICATION_OPTIONS,
   SCHOOL_GENDER_OPTIONS,
@@ -94,6 +95,8 @@ export async function registerSchoolAction(
         gender: data.gender,
         schoolSystem: data.classification,
         unit: data.stage,
+        voteToken: generatePublicToken(),
+        shareToken: generatePublicToken(),
       },
     });
 

@@ -2,7 +2,7 @@
 // المرحلة الحالية: تسجيل المدرسة + تسجيل الدخول + معالج الخطة الكامل (25 خطوة)
 //
 // الكيانات اللاحقة (خارج نطاق هذا الإصدار، انظر خطة المعمار المنشورة):
-// Vote · PlanExport
+// PlanExport
 
 generator client {
   provider = "prisma-client"
@@ -43,6 +43,10 @@ model School {
   // تتبع تقدم المعالج
   currentStep Int @default(1)
 
+  // روابط عامة بلا تسجيل دخول
+  voteToken  String @unique // رابط التصويت على المبادرات والبرامج
+  shareToken String @unique // رابط المشاركة والتقييم
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -53,6 +57,7 @@ model School {
   operationalGoals OperationalGoal[]
   swotItems        SwotItem[]
   keyIssues        KeyIssue[]
+  evaluations      Evaluation[]
 
   @@map("schools")
 }
@@ -192,8 +197,36 @@ model InitiativeProgram {
   operationalGoal   OperationalGoal @relation(fields: [operationalGoalId], references: [id], onDelete: Cascade)
 
   actionItems ActionItem[]
+  votes       Vote[]
 
   @@map("initiatives_programs")
+}
+
+/// صوت واحد على مبادرة أو برنامج — عبر رابط عام بلا تسجيل دخول
+model Vote {
+  id        String   @id @default(cuid())
+  voterName String? // اسم المصوّت (اختياري)
+  createdAt DateTime @default(now())
+
+  initiativeId String
+  initiative   InitiativeProgram @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+
+  @@map("votes")
+}
+
+/// تقييم مُرسَل عبر رابط المشاركة العام (مشرف تربوي / ولي أمر)
+model Evaluation {
+  id           String   @id @default(cuid())
+  reviewerName String
+  reviewerRole String // SUPERVISOR | PARENT | OTHER
+  rating       Int // 1-5
+  comment      String?
+  createdAt    DateTime @default(now())
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("evaluations")
 }
 
 /// سطر تنفيذ في الجدول التفصيلي لكل هدف استراتيجي (النموذج الرسمي، صفحات 6-9)

@@ -78,6 +78,12 @@ export const SWOT_CATEGORIES = [
   { value: "THREAT", label: "التهديدات", step: 12 },
 ] as const;
 
+export const REVIEWER_ROLE_LABELS: Record<string, string> = {
+  SUPERVISOR: "مشرف تربوي",
+  PARENT: "ولي أمر",
+  OTHER: "أخرى",
+};
+
 export const INITIATIVE_TYPES = {
   INITIATIVE: { value: "INITIATIVE", label: "مبادرة", step: 14 },
   PROGRAM: { value: "PROGRAM", label: "برنامج", step: 15 },

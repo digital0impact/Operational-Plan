@@ -60,20 +60,33 @@ const optionalInt = z
     message: "أدخل رقمًا صحيحًا موجبًا",
   });
 
+/**
+ * حقل اختياري بقيم محدودة (select/radio). لا نعتمد على `.optional()` وحدها:
+ * عندما يبقى العنصر المعطَّل (placeholder) هو المحدَّد في select، لا يُرسِل
+ * بعض المتصفحات (Chromium) اسم الحقل ضمن FormData إطلاقًا، فتصل القيمة إلى
+ * الخادم كـ null — وهي قيمة يرفضها `.optional()` (يقبل undefined فقط) ولا
+ * تطابق `z.literal("")`. المعالجة المسبقة هنا توحّد null/""/undefined إلى
+ * undefined قبل التحقق.
+ */
+function optionalEnum(values: [string, ...string[]]) {
+  return z
+    .preprocess(
+      (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
+      z.enum(values).optional()
+    )
+    .transform((v) => v ?? null);
+}
+
 const step1Schema = z.object({
   ministryNumber: optionalText(50),
-  studyTime: z.enum(
-    STUDY_TIME_OPTIONS.map((o) => o.value) as [string, ...string[]]
-  ).optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  studyTime: optionalEnum(STUDY_TIME_OPTIONS.map((o) => o.value) as [string, ...string[]]),
   studentsCount: optionalInt,
   classroomsCount: optionalInt,
-  buildingType: z.enum(
-    BUILDING_TYPE_OPTIONS.map((o) => o.value) as [string, ...string[]]
-  ).optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  buildingType: optionalEnum(BUILDING_TYPE_OPTIONS.map((o) => o.value) as [string, ...string[]]),
   educationType: optionalText(100),
-  buildingIndependence: z.enum(
+  buildingIndependence: optionalEnum(
     BUILDING_INDEPENDENCE_OPTIONS.map((o) => o.value) as [string, ...string[]]
-  ).optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  ),
   phone: optionalText(30),
   schoolEmail: z
     .string()
@@ -114,11 +127,9 @@ export async function saveStep1Action(
   redirect("/wizard/2");
 }
 
-const levelEnum = z
-  .enum(PERFORMANCE_LEVEL_OPTIONS.map((o) => o.value) as [string, ...string[]])
-  .optional()
-  .or(z.literal(""))
-  .transform((v) => (v ? v : null));
+const levelEnum = optionalEnum(
+  PERFORMANCE_LEVEL_OPTIONS.map((o) => o.value) as [string, ...string[]]
+);
 
 const step2Schema = z.object({
   performanceGeneral: levelEnum,

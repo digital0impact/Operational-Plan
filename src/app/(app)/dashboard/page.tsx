@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
+import { prisma } from "@/lib/db";
 import { getCompletedSteps } from "@/lib/wizard-data";
+import { getEvaluationSummary } from "@/lib/public-data";
+import { CopyLink } from "@/components/copy-link";
 import {
   TOTAL_WIZARD_STEPS,
   WIZARD_STAGES,
   WIZARD_STEP_TITLES,
+  REVIEWER_ROLE_LABELS,
   findLabel,
   SCHOOL_GENDER_OPTIONS,
   SCHOOL_CLASSIFICATION_OPTIONS,
@@ -18,7 +22,18 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const school = user!.school!;
 
-  const completedSteps = await getCompletedSteps(school.id);
+  const [completedSteps, totalVotes, evaluations, evalSummary] = await Promise.all([
+    getCompletedSteps(school.id),
+    prisma.vote.count({
+      where: { initiative: { operationalGoal: { schoolId: school.id } } },
+    }),
+    prisma.evaluation.findMany({
+      where: { schoolId: school.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    getEvaluationSummary(school.id),
+  ]);
   const completedCount = completedSteps.size;
   const progressPercent = Math.round((completedCount / TOTAL_WIZARD_STEPS) * 100);
   const isPlanComplete = completedCount >= TOTAL_WIZARD_STEPS;
@@ -156,6 +171,59 @@ export default async function DashboardPage() {
             })}
           </ul>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-6">
+        <h2 className="text-base font-bold text-ink">روابط عامة بلا تسجيل دخول</h2>
+        <p className="mt-1 text-sm text-muted">
+          شارك هذه الروابط مع المعلمين لتصويتهم على المبادرات والبرامج، ومع
+          المشرف التربوي أو أولياء الأمور للاطلاع على الخطة وتقييمها.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <CopyLink path={`/vote/${school.voteToken}`} label={`رابط التصويت (${totalVotes} صوت)`} />
+          <CopyLink path={`/share/${school.shareToken}`} label="رابط المشاركة والتقييم" />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-ink">التقييمات الواردة</h2>
+          {evalSummary.count > 0 ? (
+            <span className="text-sm text-muted">
+              ⭐ {evalSummary.average!.toFixed(1)} من 5 · {evalSummary.count} تقييم
+            </span>
+          ) : null}
+        </div>
+
+        {evaluations.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">
+            لا توجد تقييمات بعد — شارك رابط المشاركة والتقييم لتصل إليك الآراء هنا.
+          </p>
+        ) : (
+          <ul className="mt-4 flex flex-col gap-3">
+            {evaluations.map((evaluation) => (
+              <li
+                key={evaluation.id}
+                className="rounded-lg border border-border bg-surface-2 p-3.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-ink">
+                    {evaluation.reviewerName}{" "}
+                    <span className="font-normal text-muted">
+                      · {REVIEWER_ROLE_LABELS[evaluation.reviewerRole] ?? evaluation.reviewerRole}
+                    </span>
+                  </p>
+                  <span className="shrink-0 font-mono text-xs text-accent">
+                    ⭐ {evaluation.rating}/5
+                  </span>
+                </div>
+                {evaluation.comment ? (
+                  <p className="mt-1.5 text-sm text-ink">{evaluation.comment}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
