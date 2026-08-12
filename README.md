@@ -61,9 +61,11 @@
 
 - **Next.js 16** (App Router، Server Actions، Turbopack، مسار معالج ديناميكي
   `wizard/[step]`)
-- **Prisma ORM 7** + SQLite (عبر `@prisma/adapter-better-sqlite3`) للتطوير
-  المحلي — قابل للتبديل إلى PostgreSQL لاحقًا بتغيير `provider` في
-  `prisma/schema.prisma` ومحوّل الاتصال في `src/lib/db.ts`
+- **Prisma ORM 7** + **PostgreSQL** (عبر `@prisma/adapter-pg`) — تشغّل حاليًا
+  على قاعدة [Supabase](https://supabase.com) Postgres. كل صفحة تحت جلسة
+  مستخدم (`(app)`، `(admin)`) أو مبنية على رمز عام (`/vote`, `/share`)
+  معلَّمة صراحة `export const dynamic = "force-dynamic"` حتى لا يحاول
+  `next build` تصييرها كصفحة ثابتة أثناء البناء
 - **Tailwind CSS v4** (نمط RTL كامل، لوحة ألوان تيل/كهرماني)
 - **Zod** للتحقق من صحة المدخلات
 - جلسات مصادقة مخصّصة (جدول `Session` + كوكي HttpOnly، بدون مكتبة خارجية)
@@ -78,12 +80,29 @@
 
 ## التشغيل محليًا
 
+المشروع مربوط بقاعدة PostgreSQL على Supabase — لا توجد قاعدة SQLite محلية
+بعد الآن. اضبط `.env`:
+
+```bash
+# Project Settings → Database → Connection string في لوحة Supabase
+DATABASE_URL="postgresql://postgres.<ref>:<password>@<pooler-host>:5432/postgres"
+```
+
 ```bash
 npm install
-npx prisma migrate dev   # ينشئ dev.db ويطبّق المخطط
-npx prisma db seed       # يزرع الأهداف الاستراتيجية العشرة + رمز تفعيل تجريبي
+npx prisma migrate deploy   # يطبّق كل الهجرات (migrations) على قاعدة Supabase
+npx prisma db seed          # يزرع الأهداف الاستراتيجية العشرة + رمز تفعيل تجريبي + حساب إدارة عامة
 npm run dev
 ```
+
+> ملاحظة: بيئة تطوير Claude Code السحابية (sandbox) التي بُني بها هذا
+> المشروع تحجب اتصالات TCP الخام لقواعد البيانات (لا تسمح إلا بحركة HTTPS
+> عبر بروكسي مخصّص) — لذلك تعذّر تنفيذ `migrate deploy`/`db seed` من داخل
+> تلك الجلسة نفسها، وتم توليد ملف الهجرة الأولي دون اتصال فعلي بالقاعدة
+> (عبر `prisma migrate diff --from-empty`). نفّذ الأمرين أعلاه من جهازك أو
+> من بيئة نشر فعلية للاتصال بقاعدة Supabase وإنشاء الجداول فعليًا؛ `next
+> build` و`next dev` لا يحتاجان اتصالًا بقاعدة البيانات وقت البناء (لا يوجد
+> تصيير ثابت لأي صفحة تعتمد على البيانات).
 
 افتح `http://localhost:3000/register` واستخدم رمز التفعيل التجريبي الذي
 تمت طباعته من أمر `db seed` (افتراضيًا `SCH-DEMO-0001`)، أو سجّل الدخول إلى
@@ -119,6 +138,8 @@ PDF_CHROMIUM_PATH=/path/to/chromium
 prisma/schema.prisma        نموذج البيانات الكامل (School, User, Session, ActivationCode,
                              StrategicGoal, OperationalGoal, KPI, SwotItem, KeyIssue,
                              InitiativeProgram, ActionItem, ProcedureInput, WizardStepProgress)
+                             — provider = postgresql
+prisma/migrations/           هجرة أولية واحدة (init_postgres) تنشئ كل الجداول على Postgres
 prisma/seed.ts               زراعة الأهداف الاستراتيجية العشرة + رمز تفعيل تجريبي
 src/lib/                     قاعدة البيانات، الجلسات، تجزئة كلمات المرور، القوائم الثابتة،
                               استعلامات المعالج المشتركة (wizard-data.ts)

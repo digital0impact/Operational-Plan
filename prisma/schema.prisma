@@ -10,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 /// مدرسة (Tenant) — تُنشأ عبر رمز تفعيل صادر من الإدارة العامة للتعليم

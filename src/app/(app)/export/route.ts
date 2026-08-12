@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { renderSchoolPlanPdf } from "@/lib/pdf/render";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user?.school) {

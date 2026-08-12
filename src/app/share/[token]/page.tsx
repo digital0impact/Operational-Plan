@@ -10,6 +10,8 @@ import { submitEvaluationAction } from "@/app/actions/public";
 import { PublicShell } from "@/components/public/public-shell";
 import { PlanSummary } from "@/components/plan-summary";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({
   params,
 }: {

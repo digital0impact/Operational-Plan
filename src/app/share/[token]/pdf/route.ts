@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSchoolByShareToken } from "@/lib/public-data";
 import { renderSchoolPlanPdf } from "@/lib/pdf/render";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ token: string }> }

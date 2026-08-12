@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { TopBar } from "@/components/top-bar";
 
+// كل صفحة تحت هذا التخطيط مرتبطة بجلسة مستخدم ومدرسة محدَّدة — لا فائدة
+// من محاولة توليدها كصفحة ثابتة، ومحاولة ذلك تجعل البناء يستعلم قاعدة
+// البيانات أثناء البناء نفسه بلا داعٍ.
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({
   children,
 }: {
