@@ -368,6 +368,47 @@ export async function saveInitiativesAction(
   redirect(step === 14 ? "/wizard/15" : "/wizard/16");
 }
 
+const MAX_EVIDENCE_IMAGE_BYTES = 2 * 1024 * 1024; // 2 ميجابايت
+const ALLOWED_EVIDENCE_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+type EvidenceImagePatch = {
+  evidenceImageData?: Uint8Array<ArrayBuffer> | null;
+  evidenceImageType?: string | null;
+};
+
+/**
+ * يقرأ صورة الشاهد المرفوعة لمبادرة/برنامج واحد من FormData، إن وُجدت.
+ * يُعيد null إن لم تُرفع صورة جديدة (سواء بقيت السابقة أو طُلب حذفها —
+ * تلك الحالة تُعالَج بمفتاح removeEvidenceImage_ منفصل)، أو رسالة خطأ
+ * عربية إن كانت الصورة غير صالحة (نوع أو حجم).
+ *
+ * حقل Prisma من نوع Bytes يتوقّع Uint8Array<ArrayBuffer> تحديدًا، بينما
+ * `new Uint8Array(...)` يُستدَل عليه بنوع Uint8Array<ArrayBufferLike>
+ * الأعم (يشمل SharedArrayBuffer نظريًا). File.arrayBuffer() في الواقع
+ * يُعيد ArrayBuffer حقيقيًا دائمًا (Web API)، فالتحويل هنا آمن.
+ */
+async function readEvidenceImage(
+  formData: FormData,
+  id: string
+): Promise<{ data: Uint8Array<ArrayBuffer>; type: string } | null | string> {
+  const file = formData.get(`evidenceImage_${id}`);
+  if (!(file instanceof File) || file.size === 0) return null;
+
+  if (!ALLOWED_EVIDENCE_IMAGE_TYPES.has(file.type)) {
+    return "صيغة صورة الشاهد غير مدعومة — يُسمح فقط بـ JPG أو PNG أو WEBP.";
+  }
+  if (file.size > MAX_EVIDENCE_IMAGE_BYTES) {
+    return "حجم صورة الشاهد كبير جدًا — الحد الأقصى 2 ميجابايت.";
+  }
+
+  const buffer = await file.arrayBuffer();
+  return { data: new Uint8Array(buffer) as Uint8Array<ArrayBuffer>, type: file.type };
+}
+
 export async function saveDetailStepAction(
   step: number,
   _prevState: ActionState,
@@ -389,49 +430,50 @@ export async function saveDetailStepAction(
     select: { id: true },
   });
   const ownedIds = new Set(owned.map((o) => o.id));
+  const targetIds = initiativeIds.filter((id) => ownedIds.has(id));
+
+  // اقرأ كل صور الشواهد المرفوعة أولًا (عملية غير متزامنة) قبل بناء
+  // المعاملة، وتحقّق من صلاحيتها جميعًا قبل حفظ أي شيء.
+  const imagePatches = new Map<string, EvidenceImagePatch>();
+  for (const id of targetIds) {
+    const result = await readEvidenceImage(formData, id);
+    if (typeof result === "string") {
+      return { error: result };
+    }
+    if (result) {
+      imagePatches.set(id, {
+        evidenceImageData: result.data,
+        evidenceImageType: result.type,
+      });
+    } else if (formData.get(`removeEvidenceImage_${id}`) === "on") {
+      imagePatches.set(id, { evidenceImageData: null, evidenceImageType: null });
+    }
+  }
 
   await prisma.$transaction(
-    initiativeIds
-      .filter((id) => ownedIds.has(id))
-      .map((id) =>
-        prisma.actionItem.upsert({
-          where: { initiativeId_order: { initiativeId: id, order: 0 } },
-          update: {
-            activity: ((formData.get(`activity_${id}`) as string) ?? "").trim(),
-            targetCategory: (
-              (formData.get(`category_${id}`) as string) ?? ""
-            ).trim(),
-            executionRequirements: (
-              (formData.get(`requirements_${id}`) as string) ?? ""
-            ).trim(),
-            executionDate: (
-              (formData.get(`date_${id}`) as string) ?? ""
-            ).trim(),
-            responsible: (
-              (formData.get(`responsible_${id}`) as string) ?? ""
-            ).trim(),
-            evidence: ((formData.get(`evidence_${id}`) as string) ?? "").trim(),
-          },
-          create: {
-            initiativeId: id,
-            order: 0,
-            activity: ((formData.get(`activity_${id}`) as string) ?? "").trim(),
-            targetCategory: (
-              (formData.get(`category_${id}`) as string) ?? ""
-            ).trim(),
-            executionRequirements: (
-              (formData.get(`requirements_${id}`) as string) ?? ""
-            ).trim(),
-            executionDate: (
-              (formData.get(`date_${id}`) as string) ?? ""
-            ).trim(),
-            responsible: (
-              (formData.get(`responsible_${id}`) as string) ?? ""
-            ).trim(),
-            evidence: ((formData.get(`evidence_${id}`) as string) ?? "").trim(),
-          },
-        })
-      )
+    targetIds.map((id) => {
+      const fields = {
+        activity: ((formData.get(`activity_${id}`) as string) ?? "").trim(),
+        targetCategory: (
+          (formData.get(`category_${id}`) as string) ?? ""
+        ).trim(),
+        executionRequirements: (
+          (formData.get(`requirements_${id}`) as string) ?? ""
+        ).trim(),
+        executionDate: ((formData.get(`date_${id}`) as string) ?? "").trim(),
+        responsible: (
+          (formData.get(`responsible_${id}`) as string) ?? ""
+        ).trim(),
+        evidence: ((formData.get(`evidence_${id}`) as string) ?? "").trim(),
+      };
+      const imagePatch = imagePatches.get(id) ?? {};
+
+      return prisma.actionItem.upsert({
+        where: { initiativeId_order: { initiativeId: id, order: 0 } },
+        update: { ...fields, ...imagePatch },
+        create: { initiativeId: id, order: 0, ...fields, ...imagePatch },
+      });
+    })
   );
 
   await markStepComplete(schoolId, step);

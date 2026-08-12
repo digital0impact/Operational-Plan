@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { saveDetailStepAction } from "@/app/actions/wizard";
 import { suggestActionItemAction } from "@/app/actions/ai";
 import type { ActionState } from "@/app/actions/auth";
@@ -9,6 +9,68 @@ import { ErrorNotice } from "@/components/form-controls";
 import { SubmitButton } from "@/components/submit-button";
 import { AiSuggestButton } from "@/components/ai-suggest-button";
 import { INITIATIVE_TYPES } from "@/lib/constants";
+
+/**
+ * رفع صورة شاهد اختيارية (صورة عادية أو صورة باركود/QR يرفعها مدير
+ * المدرسة بنفسه) لمبادرة/برنامج واحد. يعرض معاينة للصورة الحالية أو
+ * المُختارة حديثًا، وزر إزالة يُرسل علامة حذف صريحة مع النموذج.
+ */
+function EvidenceImageField({
+  id,
+  existingUrl,
+}: {
+  id: string;
+  existingUrl: string | null;
+}) {
+  const [preview, setPreview] = useState<string | null>(existingUrl);
+  const [removed, setRemoved] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-1.5 sm:col-span-2">
+      <span className="text-xs font-semibold text-muted">
+        صورة الشاهد (صورة عادية أو صورة باركود/QR) — اختياري، JPG أو PNG أو
+        WEBP بحد أقصى 2 ميجابايت
+      </span>
+
+      {preview && !removed ? (
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- معاينة محلية base64/blob، لا فائدة من next/image هنا */}
+          <img
+            src={preview}
+            alt="معاينة صورة الشاهد"
+            className="h-20 w-20 rounded-lg border border-border object-cover"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setPreview(null);
+              setRemoved(true);
+            }}
+            className="text-xs text-muted hover:text-danger"
+          >
+            إزالة الصورة
+          </button>
+        </div>
+      ) : null}
+
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        name={`evidenceImage_${id}`}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          setPreview(URL.createObjectURL(file));
+          setRemoved(false);
+        }}
+        className="w-full rounded-lg border border-dashed border-border bg-surface px-3 py-2 text-xs text-muted file:ms-2 file:rounded-md file:border-0 file:bg-accent-soft file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-accent"
+      />
+      {removed ? (
+        <input type="hidden" name={`removeEvidenceImage_${id}`} value="on" />
+      ) : null}
+    </div>
+  );
+}
 
 type DetailFieldRefs = {
   activity: HTMLTextAreaElement | null;
@@ -31,6 +93,7 @@ type InitiativeRow = {
   executionDate: string;
   responsible: string;
   evidence: string;
+  evidenceImageUrl: string | null;
 };
 
 export function DetailStepForm({
@@ -180,6 +243,10 @@ export function DetailStepForm({
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>
+            <EvidenceImageField
+              id={initiative.id}
+              existingUrl={initiative.evidenceImageUrl}
+            />
           </div>
         </div>
       ))}

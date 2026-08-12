@@ -40,6 +40,7 @@ export type PlanActionItem = {
   executionDate: string;
   responsible: string;
   evidence: string;
+  evidenceImageUrl: string | null;
 };
 
 export type PlanInitiative = {
@@ -187,6 +188,11 @@ export function buildPlanHtml(data: PlanData): string {
   td .empty, p.empty { color: #a9b6b4; }
 
   .kv-table td:first-child { width: 34%; color: #56706e; background: #f4f7f6; }
+
+  .evidence-img {
+    display: block; margin-top: 4px; max-width: 60px; max-height: 60px;
+    border: 1px solid #d7e3e1; border-radius: 4px; object-fit: cover;
+  }
 
   .numbered-row {
     display: flex; gap: 6px; margin-bottom: 4px;
@@ -421,7 +427,14 @@ export function buildPlanHtml(data: PlanData): string {
                 <td>${cell(i.actionItem?.executionRequirements)}</td>
                 <td>${cell(i.actionItem?.executionDate)}</td>
                 <td>${cell(i.actionItem?.responsible)}</td>
-                <td>${cell(i.actionItem?.evidence)}</td>
+                <td>
+                  ${cell(i.actionItem?.evidence)}
+                  ${
+                    i.actionItem?.evidenceImageUrl
+                      ? `<img class="evidence-img" src="${i.actionItem.evidenceImageUrl}" alt="صورة الشاهد" />`
+                      : ""
+                  }
+                </td>
               </tr>`
               )
               .join("")}

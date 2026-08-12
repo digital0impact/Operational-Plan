@@ -78,6 +78,12 @@ async function loadPlanData(schoolId: string): Promise<PlanData> {
               executionDate: i.actionItems[0].executionDate,
               responsible: i.actionItems[0].responsible,
               evidence: i.actionItems[0].evidence,
+              evidenceImageUrl:
+                i.actionItems[0].evidenceImageData && i.actionItems[0].evidenceImageType
+                  ? `data:${i.actionItems[0].evidenceImageType};base64,${Buffer.from(
+                      i.actionItems[0].evidenceImageData
+                    ).toString("base64")}`
+                  : null,
             }
           : null,
       })),

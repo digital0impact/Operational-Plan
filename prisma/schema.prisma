@@ -231,14 +231,16 @@ model Evaluation {
 
 /// سطر تنفيذ في الجدول التفصيلي لكل هدف استراتيجي (النموذج الرسمي، صفحات 6-9)
 model ActionItem {
-  id                    String @id @default(cuid())
-  activity              String @default("") // الأنشطة
-  targetCategory        String @default("") // الفئة المستهدفة
-  executionRequirements String @default("") // متطلبات التنفيذ
-  executionDate         String @default("") // تاريخ التنفيذ
-  responsible           String @default("") // التنفيذ والمسؤولية
-  evidence              String @default("") // الشواهد
-  order                 Int    @default(0)
+  id                    String  @id @default(cuid())
+  activity              String  @default("") // الأنشطة
+  targetCategory        String  @default("") // الفئة المستهدفة
+  executionRequirements String  @default("") // متطلبات التنفيذ
+  executionDate         String  @default("") // تاريخ التنفيذ
+  responsible           String  @default("") // التنفيذ والمسؤولية
+  evidence              String  @default("") // الشواهد (نص)
+  evidenceImageData     Bytes? // صورة الشاهد (صورة عادية أو صورة باركود/QR) — مُخزَّنة كبيانات ثنائية
+  evidenceImageType     String? // نوع MIME لصورة الشاهد، مثل image/png
+  order                 Int     @default(0)
 
   initiativeId String
   initiative   InitiativeProgram @relation(fields: [initiativeId], references: [id], onDelete: Cascade)

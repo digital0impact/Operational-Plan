@@ -331,6 +331,12 @@ export default async function WizardStepPage({
       executionDate: actionItem?.executionDate ?? "",
       responsible: actionItem?.responsible ?? "",
       evidence: actionItem?.evidence ?? "",
+      evidenceImageUrl:
+        actionItem?.evidenceImageData && actionItem.evidenceImageType
+          ? `data:${actionItem.evidenceImageType};base64,${Buffer.from(
+              actionItem.evidenceImageData
+            ).toString("base64")}`
+          : null,
     };
   });
 
