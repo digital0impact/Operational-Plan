@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
+import { getCompletedSteps } from "@/lib/wizard-data";
 import {
-  IMPLEMENTED_WIZARD_STEPS,
   TOTAL_WIZARD_STEPS,
   WIZARD_STAGES,
   WIZARD_STEP_TITLES,
@@ -18,17 +18,11 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const school = user!.school!;
 
-  const completedSteps = [
-    school.step1CompletedAt,
-    school.step2CompletedAt,
-    school.step3CompletedAt,
-    school.step4CompletedAt,
-  ].filter(Boolean).length;
-
-  const progressPercent = Math.round(
-    (completedSteps / TOTAL_WIZARD_STEPS) * 100
-  );
-  const isWizardDone = completedSteps >= IMPLEMENTED_WIZARD_STEPS;
+  const completedSteps = await getCompletedSteps(school.id);
+  const completedCount = completedSteps.size;
+  const progressPercent = Math.round((completedCount / TOTAL_WIZARD_STEPS) * 100);
+  const isPlanComplete = completedCount >= TOTAL_WIZARD_STEPS;
+  const continueStep = Math.min(school.currentStep, TOTAL_WIZARD_STEPS);
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,16 +42,21 @@ export default async function DashboardPage() {
               نسبة إنجاز الخطة التشغيلية
             </h2>
             <p className="mt-1 text-sm text-muted">
-              {completedSteps} من {TOTAL_WIZARD_STEPS} خطوة — الخطوات المتاحة
-              حاليًا: {IMPLEMENTED_WIZARD_STEPS}
+              {completedCount} من {TOTAL_WIZARD_STEPS} خطوة
             </p>
           </div>
-          <Link
-            href={`/wizard/step-${Math.min(school.currentStep, IMPLEMENTED_WIZARD_STEPS)}`}
-            className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition hover:opacity-90"
-          >
-            {completedSteps === 0 ? "ابدأ إعداد الخطة" : "متابعة الخطة"}
-          </Link>
+          {isPlanComplete ? (
+            <span className="rounded-lg bg-accent-soft px-4 py-2.5 text-sm font-semibold text-accent">
+              الخطة مكتملة ✓
+            </span>
+          ) : (
+            <Link
+              href={`/wizard/${continueStep}`}
+              className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition hover:opacity-90"
+            >
+              {completedCount === 0 ? "ابدأ إعداد الخطة" : "متابعة الخطة"}
+            </Link>
+          )}
         </div>
 
         <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-surface-2">
@@ -69,14 +68,26 @@ export default async function DashboardPage() {
         <p className="mt-2 font-mono text-xs text-muted">{progressPercent}%</p>
 
         <div className="mt-6 flex flex-wrap gap-2">
-          {WIZARD_STAGES.map((stage) => (
-            <span
-              key={stage.key}
-              className="rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted"
-            >
-              {stage.label} · {stage.from}–{stage.to}
-            </span>
-          ))}
+          {WIZARD_STAGES.map((stage) => {
+            const stageDone = Array.from(
+              { length: stage.to - stage.from + 1 },
+              (_, i) => stage.from + i
+            ).every((step) => completedSteps.has(step));
+            return (
+              <span
+                key={stage.key}
+                className={
+                  "rounded-full border px-3 py-1 text-xs " +
+                  (stageDone
+                    ? "border-accent/30 bg-accent-soft text-accent"
+                    : "border-border bg-surface-2 text-muted")
+                }
+              >
+                {stageDone ? "✓ " : ""}
+                {stage.label} · {stage.from}–{stage.to}
+              </span>
+            );
+          })}
         </div>
       </section>
 
@@ -103,16 +114,16 @@ export default async function DashboardPage() {
 
         <div className="rounded-2xl border border-border bg-surface p-6">
           <h2 className="text-base font-bold text-ink">خطوات المعالج</h2>
-          <ul className="mt-4 flex flex-col gap-2">
+          <ul className="mt-4 flex max-h-80 flex-col gap-2 overflow-y-auto">
             {Object.entries(WIZARD_STEP_TITLES).map(([step, title]) => {
               const stepNumber = Number(step);
-              const done = stepNumber <= completedSteps;
-              const isNext = stepNumber === completedSteps + 1;
+              const done = completedSteps.has(stepNumber);
+              const isNext = stepNumber === continueStep && !done;
               return (
                 <li key={step} className="flex items-center gap-3 text-sm">
                   <span
                     className={
-                      "flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-bold " +
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-bold " +
                       (done
                         ? "bg-accent text-accent-ink"
                         : "border border-border text-muted")
@@ -121,13 +132,14 @@ export default async function DashboardPage() {
                     {done ? "✓" : step}
                   </span>
                   <Link
-                    href={`/wizard/step-${step}`}
+                    href={`/wizard/${step}`}
                     className={
                       "flex-1 " +
                       (isNext ? "font-semibold text-accent" : "text-ink")
                     }
                   >
                     {title}
+                    {stepNumber >= 16 ? ` — هدف ${stepNumber - 15}` : ""}
                   </Link>
                 </li>
               );
@@ -135,18 +147,6 @@ export default async function DashboardPage() {
           </ul>
         </div>
       </section>
-
-      {isWizardDone ? (
-        <section className="rounded-2xl border border-accent/30 bg-accent-soft p-6">
-          <h2 className="text-base font-bold text-accent">
-            الخطوات 5–25 قادمة
-          </h2>
-          <p className="mt-1 text-sm text-ink/80">
-            الارتباط الاستراتيجي، مؤشرات الأداء، تحليل SWOT، القضايا
-            والمبادرات، والخطة التفصيلية — في الإصدار التالي من المنصة.
-          </p>
-        </section>
-      ) : null}
     </div>
   );
 }

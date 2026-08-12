@@ -71,7 +71,19 @@ export const USER_ROLE_LABELS: Record<string, string> = {
   GENERAL_ADMIN: "الإدارة العامة للتعليم",
 };
 
-/** خارطة معالج الخطة التشغيلية الكاملة (25 خطوة) — 1 إلى 4 مُنفَّذة في هذا الإصدار. */
+export const SWOT_CATEGORIES = [
+  { value: "STRENGTH", label: "نقاط القوة", step: 9 },
+  { value: "WEAKNESS", label: "نقاط الضعف", step: 10 },
+  { value: "OPPORTUNITY", label: "الفرص", step: 11 },
+  { value: "THREAT", label: "التهديدات", step: 12 },
+] as const;
+
+export const INITIATIVE_TYPES = {
+  INITIATIVE: { value: "INITIATIVE", label: "مبادرة", step: 14 },
+  PROGRAM: { value: "PROGRAM", label: "برنامج", step: 15 },
+} as const;
+
+/** خارطة معالج الخطة التشغيلية الكاملة (25 خطوة). */
 export const WIZARD_STAGES = [
   { key: "setup", label: "الإعداد والبيانات", from: 1, to: 4 },
   { key: "strategic", label: "الارتباط الاستراتيجي", from: 5, to: 6 },
@@ -86,10 +98,40 @@ export const WIZARD_STEP_TITLES: Record<number, string> = {
   2: "مستوى الأداء العام",
   3: "مدخلات الإجراء",
   4: "مراجعة وتأكيد",
+  5: "الأهداف الاستراتيجية لوزارة التعليم",
+  6: "الأهداف التشغيلية للمدرسة",
+  7: "مؤشرات قياس الأداء",
+  8: "القيم المستهدفة",
+  9: "نقاط القوة",
+  10: "نقاط الضعف",
+  11: "الفرص",
+  12: "التهديدات",
+  13: "القضايا الرئيسية",
+  14: "المبادرات",
+  15: "البرامج",
+  16: "الخطة التفصيلية",
+  17: "الخطة التفصيلية",
+  18: "الخطة التفصيلية",
+  19: "الخطة التفصيلية",
+  20: "الخطة التفصيلية",
+  21: "الخطة التفصيلية",
+  22: "الخطة التفصيلية",
+  23: "الخطة التفصيلية",
+  24: "الخطة التفصيلية",
+  25: "الخطة التفصيلية",
 };
 
 export const TOTAL_WIZARD_STEPS = 25;
-export const IMPLEMENTED_WIZARD_STEPS = 4;
+export const IMPLEMENTED_WIZARD_STEPS = 25;
+
+/** رقم الهدف الاستراتيجي (1-10) لخطوة من خطوات الجدول التفصيلي (16-25). */
+export function detailStepGoalOrder(step: number): number {
+  return step - 15;
+}
+
+export function detailStepForGoalOrder(order: number): number {
+  return order + 15;
+}
 
 export function findLabel(
   options: readonly { value: string; label: string }[],

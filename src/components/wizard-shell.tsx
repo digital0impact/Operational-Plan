@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  IMPLEMENTED_WIZARD_STEPS,
   TOTAL_WIZARD_STEPS,
   WIZARD_STAGES,
   WIZARD_STEP_TITLES,
@@ -8,10 +7,12 @@ import {
 
 export function WizardShell({
   currentStep,
+  title,
   description,
   children,
 }: {
   currentStep: number;
+  title?: string;
   description: string;
   children: React.ReactNode;
 }) {
@@ -21,10 +22,18 @@ export function WizardShell({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="flex items-center justify-between">
         <Link href="/dashboard" className="text-sm text-muted hover:text-accent">
           ← العودة للرئيسية
         </Link>
+        {currentStep > 1 ? (
+          <Link
+            href={`/wizard/${currentStep - 1}`}
+            className="text-sm text-muted hover:text-accent"
+          >
+            الخطوة السابقة →
+          </Link>
+        ) : null}
       </div>
 
       <div className="overflow-x-auto">
@@ -57,12 +66,9 @@ export function WizardShell({
       <div>
         <p className="font-mono text-xs text-muted">
           الخطوة {currentStep} من {TOTAL_WIZARD_STEPS}
-          {currentStep > IMPLEMENTED_WIZARD_STEPS
-            ? " (قادم في الإصدار القادم)"
-            : ""}
         </p>
         <h1 className="mt-1 text-2xl font-extrabold text-ink">
-          {WIZARD_STEP_TITLES[currentStep]}
+          {title ?? WIZARD_STEP_TITLES[currentStep]}
         </h1>
         <p className="mt-1 text-sm text-muted">{description}</p>
       </div>

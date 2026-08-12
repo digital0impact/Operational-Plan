@@ -1,9 +1,8 @@
 // Prisma schema — منصة الخطة التشغيلية لمدارس التعليم العام
-// المرحلة الحالية: تسجيل المدرسة + تسجيل الدخول + الخطوات 1-4 من معالج الخطة
-// (بيانات المدرسة، مستوى الأداء، مدخلات الإجراء، المراجعة والتأكيد)
+// المرحلة الحالية: تسجيل المدرسة + تسجيل الدخول + معالج الخطة الكامل (25 خطوة)
 //
 // الكيانات اللاحقة (خارج نطاق هذا الإصدار، انظر خطة المعمار المنشورة):
-// OperationalGoal · KPI · SWOTItem · KeyIssue · InitiativeProgram · ActionItem · Vote · PlanExport
+// Vote · PlanExport
 
 generator client {
   provider = "prisma-client"
@@ -19,43 +18,56 @@ model School {
   id String @id @default(cuid())
 
   // بيانات المدرسة (النموذج الرسمي، صفحة 2)
-  name                  String
-  unit                  String // الوحدة (المرحلة)
-  schoolSystem          String // نظام المدرسة
-  ministryNumber        String? // الرقم الوزاري
-  studyTime             String? // وقت الدراسة
-  studentsCount         Int?
-  classroomsCount       Int?
-  gender                String // جنس المدرسة
-  buildingType          String? // نوع المبنى
-  educationType         String? // نوع التعليم
-  buildingIndependence  String? // استقلالية المبنى
-  phone                 String?
-  schoolEmail           String?
-  address               String?
+  name                 String
+  unit                 String // الوحدة (المرحلة)
+  schoolSystem         String // نظام المدرسة
+  ministryNumber       String? // الرقم الوزاري
+  studyTime            String? // وقت الدراسة
+  studentsCount        Int?
+  classroomsCount      Int?
+  gender               String // جنس المدرسة
+  buildingType         String? // نوع المبنى
+  educationType        String? // نوع التعليم
+  buildingIndependence String? // استقلالية المبنى
+  phone                String?
+  schoolEmail          String?
+  address              String?
 
   // مستوى الأداء (النموذج الرسمي، صفحة 2)
-  performanceGeneral            String? // مستوى الأداء العام
-  performanceManagement         String? // مستوى الإدارة المدرسية
-  performanceTeachingLearning   String? // مستوى التعليم والتعلم
-  performanceLearningOutcomes   String? // مستوى نواتج التعلم
-  performanceEnvironment        String? // مستوى البيئة المدرسية
+  performanceGeneral          String? // مستوى الأداء العام
+  performanceManagement       String? // مستوى الإدارة المدرسية
+  performanceTeachingLearning String? // مستوى التعليم والتعلم
+  performanceLearningOutcomes String? // مستوى نواتج التعلم
+  performanceEnvironment      String? // مستوى البيئة المدرسية
 
   // تتبع تقدم المعالج
-  currentStep       Int       @default(1)
-  step1CompletedAt  DateTime?
-  step2CompletedAt  DateTime?
-  step3CompletedAt  DateTime?
-  step4CompletedAt  DateTime?
+  currentStep Int @default(1)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  activationCode  ActivationCode?
-  users           User[]
-  procedureInputs ProcedureInput[]
+  activationCode   ActivationCode?
+  users            User[]
+  procedureInputs  ProcedureInput[]
+  stepProgress     WizardStepProgress[]
+  operationalGoals OperationalGoal[]
+  swotItems        SwotItem[]
+  keyIssues        KeyIssue[]
 
   @@map("schools")
+}
+
+/// تتبّع إتمام كل خطوة من خطوات المعالج الخمس والعشرين
+model WizardStepProgress {
+  id          String   @id @default(cuid())
+  step        Int
+  completedAt DateTime @default(now())
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, step])
+  @@map("wizard_step_progress")
 }
 
 /// رمز تفعيل تصدره الإدارة العامة للتعليم لمدرسة واحدة (SCH-XXXX-XXXX)
@@ -109,7 +121,97 @@ model StrategicGoal {
   order Int    @unique
   title String
 
+  operationalGoals OperationalGoal[]
+
   @@map("strategic_goals")
+}
+
+/// الهدف التشغيلي للمدرسة — واحد لكل هدف استراتيجي (مصفوفة النموذج الرسمي، صفحة 3)
+model OperationalGoal {
+  id   String @id @default(cuid())
+  text String @default("")
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  strategicGoalId String
+  strategicGoal   StrategicGoal @relation(fields: [strategicGoalId], references: [id])
+
+  kpi         KPI?
+  initiatives InitiativeProgram[]
+
+  @@unique([schoolId, strategicGoalId])
+  @@map("operational_goals")
+}
+
+/// مؤشر قياس الأداء + القيمة المستهدفة لكل هدف تشغيلي (النموذج الرسمي، صفحة 4)
+model KPI {
+  id          String @id @default(cuid())
+  indicator   String @default("")
+  targetValue String @default("")
+
+  operationalGoalId String          @unique
+  operationalGoal   OperationalGoal @relation(fields: [operationalGoalId], references: [id], onDelete: Cascade)
+
+  @@map("kpis")
+}
+
+/// بند من بنود تحليل SWOT (النموذج الرسمي، صفحة 4)
+model SwotItem {
+  id       String @id @default(cuid())
+  category String // STRENGTH | WEAKNESS | OPPORTUNITY | THREAT
+  text     String
+  order    Int    @default(0)
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("swot_items")
+}
+
+/// قضية رئيسية (النموذج الرسمي، صفحة 5)
+model KeyIssue {
+  id    String @id @default(cuid())
+  text  String
+  order Int    @default(0)
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("key_issues")
+}
+
+/// مبادرة أو برنامج تحت هدف تشغيلي (النموذج الرسمي، صفحة 5)
+model InitiativeProgram {
+  id    String @id @default(cuid())
+  type  String // INITIATIVE | PROGRAM
+  name  String
+  order Int    @default(0)
+
+  operationalGoalId String
+  operationalGoal   OperationalGoal @relation(fields: [operationalGoalId], references: [id], onDelete: Cascade)
+
+  actionItems ActionItem[]
+
+  @@map("initiatives_programs")
+}
+
+/// سطر تنفيذ في الجدول التفصيلي لكل هدف استراتيجي (النموذج الرسمي، صفحات 6-9)
+model ActionItem {
+  id                    String @id @default(cuid())
+  activity              String @default("") // الأنشطة
+  targetCategory        String @default("") // الفئة المستهدفة
+  executionRequirements String @default("") // متطلبات التنفيذ
+  executionDate         String @default("") // تاريخ التنفيذ
+  responsible           String @default("") // التنفيذ والمسؤولية
+  evidence              String @default("") // الشواهد
+  order                 Int    @default(0)
+
+  initiativeId String
+  initiative   InitiativeProgram @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+
+  @@unique([initiativeId, order])
+  @@map("action_items")
 }
 
 /// مدخلات الإجراء — قائمة ثابتة من 4 عناصر لكل مدرسة (النموذج الرسمي، صفحة 2)
