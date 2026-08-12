@@ -44,7 +44,7 @@ export function RegisterForm() {
         <ChoiceGroup
           name="classification"
           options={SCHOOL_CLASSIFICATION_OPTIONS}
-          columns={4}
+          columns={3}
         />
       </Field>
 

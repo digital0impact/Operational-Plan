@@ -9,7 +9,6 @@ export const SCHOOL_GENDER_OPTIONS = [
 export const SCHOOL_CLASSIFICATION_OPTIONS = [
   { value: "PRIVATE", label: "أهلي" },
   { value: "GOVERNMENT", label: "حكومي" },
-  { value: "SPECIALIZED", label: "متخصص" },
   { value: "INTERNATIONAL", label: "عالمي" },
 ] as const;
 
