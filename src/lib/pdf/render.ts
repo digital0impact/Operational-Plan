@@ -1,5 +1,5 @@
 import "server-only";
-import { chromium } from "playwright-core";
+import { chromium, type LaunchOptions } from "playwright-core";
 import { prisma } from "@/lib/db";
 import {
   getKeyIssues,
@@ -8,10 +8,35 @@ import {
 } from "@/lib/wizard-data";
 import { buildPlanHtml, type PlanData } from "@/lib/pdf/template";
 
-// في بيئة التطوير الحالية يتوفر Chromium مثبَّتًا مسبقًا في هذا المسار.
-// في بيئة إنتاج مختلفة، اضبط PDF_CHROMIUM_PATH على مسار تنفيذي Chromium/Chrome.
-const CHROMIUM_PATH =
-  process.env.PDF_CHROMIUM_PATH ?? "/opt/pw-browsers/chromium";
+/**
+ * خيارات تشغيل Chromium حسب البيئة:
+ * - PDF_CHROMIUM_PATH مضبوط صراحة → استخدمه كما هو (خادم مخصَّص).
+ * - على Vercel (بيئة serverless بلا Chromium مثبَّت مسبقًا وبنظام ملفات
+ *   للقراءة فقط عدا /tmp) → استخدم @sparticuz/chromium، وهو بناء Chromium
+ *   مضغوط مخصَّص لبيئات Lambda/Vercel يُستخرَج إلى /tmp عند أول استدعاء.
+ * - غير ذلك (بيئة التطوير الحالية) → المسار المثبَّت مسبقًا في هذا الصندوق.
+ */
+async function resolveLaunchOptions(): Promise<LaunchOptions> {
+  if (process.env.PDF_CHROMIUM_PATH) {
+    return {
+      executablePath: process.env.PDF_CHROMIUM_PATH,
+      args: ["--no-sandbox"],
+    };
+  }
+
+  if (process.env.VERCEL) {
+    const { default: sparticuzChromium } = await import("@sparticuz/chromium");
+    return {
+      executablePath: await sparticuzChromium.executablePath(),
+      args: sparticuzChromium.args,
+    };
+  }
+
+  return {
+    executablePath: "/opt/pw-browsers/chromium",
+    args: ["--no-sandbox"],
+  };
+}
 
 async function loadPlanData(schoolId: string): Promise<PlanData> {
   const [school, manager, procedureInputs, strategicGoals, operationalGoals, swot, keyIssues] =
@@ -67,10 +92,7 @@ export async function renderSchoolPlanPdf(schoolId: string): Promise<Buffer> {
   const data = await loadPlanData(schoolId);
   const html = buildPlanHtml(data);
 
-  const browser = await chromium.launch({
-    executablePath: CHROMIUM_PATH,
-    args: ["--no-sandbox"],
-  });
+  const browser = await chromium.launch(await resolveLaunchOptions());
 
   try {
     const page = await browser.newPage();

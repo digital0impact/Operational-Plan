@@ -123,14 +123,37 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ### تصدير PDF في بيئة أخرى غير هذه البيئة التطويرية
 
-يعتمد `/export` على وجود تنفيذي Chromium على القرص (لا يُنزَّله
-`playwright-core` تلقائيًا). في هذه البيئة يتوفر مسبقًا على
-`/opt/pw-browsers/chromium`. في بيئة إنتاج أخرى ثبِّت Chromium (أو استخدم
-حزمة مثل `@sparticuz/chromium` في بيئة serverless) واضبط متغيّر البيئة:
+يعتمد `/export` على وجود تنفيذي Chromium. في هذه البيئة التطويرية يتوفر
+مسبقًا على `/opt/pw-browsers/chromium`. في استضافة ذاتية اضبط:
 
 ```bash
 PDF_CHROMIUM_PATH=/path/to/chromium
 ```
+
+على **Vercel** لا حاجة لأي ضبط — `src/lib/pdf/render.ts` يكتشف
+`process.env.VERCEL` تلقائيًا ويستخدم `@sparticuz/chromium` (بناء
+Chromium مضغوط مخصَّص لبيئات serverless، يُستخرَج إلى `/tmp` عند أول
+استدعاء). `next.config.ts` يستثني `playwright-core` و`@sparticuz/chromium`
+من التجميع (`serverExternalPackages`) حتى يتتبّعهما Vercel كملفات خارجية
+بدل تضمينهما في حزمة الدالة.
+
+## النشر على Vercel
+
+المستودع جاهز للنشر مباشرة (Next.js قياسي، يكتشفه Vercel تلقائيًا):
+
+1. **New Project** في لوحة Vercel ← اختر مستودع `digital0impact/operational-plan`
+   ← فرع `claude/school-operational-plan-platform-5tf4l8` (أو ادمجه في
+   الفرع الرئيسي أولًا)
+2. أضف متغيّرات البيئة (Project Settings → Environment Variables):
+   - `DATABASE_URL` — رابط اتصال Supabase Postgres (نفس القيمة في `.env` المحلي)
+   - `ANTHROPIC_API_KEY` — اختياري، لتفعيل أزرار الاقتراح بالذكاء الاصطناعي
+3. **Deploy**
+4. بعد أول نشر ناجح، شغّل الهجرات والزراعة **مرة واحدة** من جهازك (وليس
+   من Vercel نفسها — لا توجد خطوة بناء تُنفَّذ فيها أوامر قاعدة بيانات):
+   ```bash
+   npx prisma migrate deploy
+   npx prisma db seed
+   ```
 
 ## بنية المشروع
 
