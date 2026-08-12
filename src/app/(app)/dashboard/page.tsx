@@ -45,18 +45,28 @@ export default async function DashboardPage() {
               {completedCount} من {TOTAL_WIZARD_STEPS} خطوة
             </p>
           </div>
-          {isPlanComplete ? (
-            <span className="rounded-lg bg-accent-soft px-4 py-2.5 text-sm font-semibold text-accent">
-              الخطة مكتملة ✓
-            </span>
-          ) : (
-            <Link
-              href={`/wizard/${continueStep}`}
-              className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition hover:opacity-90"
-            >
-              {completedCount === 0 ? "ابدأ إعداد الخطة" : "متابعة الخطة"}
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {completedCount > 0 ? (
+              <a
+                href="/export"
+                className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent"
+              >
+                تصدير PDF
+              </a>
+            ) : null}
+            {isPlanComplete ? (
+              <span className="rounded-lg bg-accent-soft px-4 py-2.5 text-sm font-semibold text-accent">
+                الخطة مكتملة ✓
+              </span>
+            ) : (
+              <Link
+                href={`/wizard/${continueStep}`}
+                className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition hover:opacity-90"
+              >
+                {completedCount === 0 ? "ابدأ إعداد الخطة" : "متابعة الخطة"}
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-surface-2">
