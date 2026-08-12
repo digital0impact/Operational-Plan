@@ -15,9 +15,16 @@ export const SCHOOL_CLASSIFICATION_OPTIONS = [
 
 export const SCHOOL_STAGE_OPTIONS = [
   { value: "KINDERGARTEN", label: "رياض الأطفال" },
-  { value: "PRIMARY", label: "المرحلة الابتدائية" },
-  { value: "MIDDLE", label: "المرحلة المتوسطة" },
-  { value: "SECONDARY", label: "المرحلة الثانوية" },
+  { value: "PRIMARY", label: "ابتدائية" },
+  { value: "PRIMARY_MIDDLE", label: "ابتدائي ومتوسط" },
+  { value: "PRIMARY_WITH_KG", label: "ابتدائية وروضة ملحقة" },
+  { value: "PRIMARY_UPPER_MIDDLE", label: "إبتدائية صفوف عليا ومتوسطة" },
+  { value: "MIDDLE", label: "متوسطة" },
+  { value: "SECONDARY", label: "ثانوية" },
+  { value: "COMPLEX_KG_PRIMARY_MIDDLE", label: "مجمع روضة وابتدائي ومتوسط" },
+  { value: "COMPLEX_MIDDLE_SECONDARY", label: "مجمع متوسطة وثانوية" },
+  { value: "COMPLEX_PRIMARY_MIDDLE_SECONDARY", label: "مجمع ابتدائية ومتوسطة وثانوية" },
+  { value: "COMPLEX_KG_PRIMARY_MIDDLE_SECONDARY", label: "مجمع روضة وابتدائي ومتوسط وثانوي" },
 ] as const;
 
 export const STUDY_TIME_OPTIONS = [
