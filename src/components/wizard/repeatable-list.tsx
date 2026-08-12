@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { AiSuggestButton } from "@/components/ai-suggest-button";
+import type { AiResult } from "@/lib/ai/generate";
 
 let counter = 0;
 function nextKey() {
@@ -13,11 +15,17 @@ export function RepeatableList({
   initialItems,
   placeholder,
   addLabel = "إضافة بند",
+  aiSuggest,
 }: {
   name: string;
   initialItems: string[];
   placeholder?: string;
   addLabel?: string;
+  /** إن مُرِّرت، تُعرض فوق القائمة زر "اقترح بالذكاء الاصطناعي" يضيف بنودًا مقترحة كصفوف جديدة. */
+  aiSuggest?: {
+    label?: string;
+    onGenerate: () => Promise<AiResult<{ items: string[] }>>;
+  };
 }) {
   const [rows, setRows] = useState(() =>
     initialItems.length > 0
@@ -25,8 +33,26 @@ export function RepeatableList({
       : [{ key: nextKey(), value: "" }]
   );
 
+  function appendSuggested(items: string[]) {
+    setRows((current) => {
+      const nonEmpty = current.filter((row) => row.value.trim() !== "");
+      const existing = new Set(nonEmpty.map((row) => row.value.trim()));
+      const additions = items
+        .filter((item) => !existing.has(item.trim()))
+        .map((value) => ({ key: nextKey(), value }));
+      return [...nonEmpty, ...additions];
+    });
+  }
+
   return (
     <div className="flex flex-col gap-2">
+      {aiSuggest ? (
+        <AiSuggestButton
+          label={aiSuggest.label}
+          onGenerate={aiSuggest.onGenerate}
+          onResult={(data) => appendSuggested(data.items)}
+        />
+      ) : null}
       {rows.map((row, index) => (
         <div key={row.key} className="flex items-center gap-2">
           <span className="w-5 shrink-0 text-center font-mono text-xs text-muted">

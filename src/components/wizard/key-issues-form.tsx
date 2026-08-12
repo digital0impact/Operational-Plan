@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { saveKeyIssuesAction } from "@/app/actions/wizard";
+import { suggestKeyIssuesAction } from "@/app/actions/ai";
 import type { ActionState } from "@/app/actions/auth";
 import { ErrorNotice } from "@/components/form-controls";
 import { SubmitButton } from "@/components/submit-button";
@@ -23,6 +24,10 @@ export function KeyIssuesForm({ items }: { items: string[] }) {
         name="items"
         initialItems={items}
         addLabel="إضافة قضية"
+        aiSuggest={{
+          label: "رشّح قضايا بالذكاء الاصطناعي",
+          onGenerate: suggestKeyIssuesAction,
+        }}
       />
 
       <ErrorNotice message={state.error} />

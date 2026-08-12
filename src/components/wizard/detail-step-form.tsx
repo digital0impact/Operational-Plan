@@ -1,12 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { saveDetailStepAction } from "@/app/actions/wizard";
+import { suggestActionItemAction } from "@/app/actions/ai";
 import type { ActionState } from "@/app/actions/auth";
 import { ErrorNotice } from "@/components/form-controls";
 import { SubmitButton } from "@/components/submit-button";
+import { AiSuggestButton } from "@/components/ai-suggest-button";
 import { INITIATIVE_TYPES } from "@/lib/constants";
+
+type DetailFieldRefs = {
+  activity: HTMLTextAreaElement | null;
+  targetCategory: HTMLInputElement | null;
+  executionRequirements: HTMLInputElement | null;
+  executionDate: HTMLInputElement | null;
+  responsible: HTMLInputElement | null;
+  evidence: HTMLInputElement | null;
+};
 
 const initialState: ActionState = { error: null };
 
@@ -31,6 +42,7 @@ export function DetailStepForm({
 }) {
   const action = saveDetailStepAction.bind(null, step);
   const [state, formAction] = useActionState(action, initialState);
+  const fieldRefs = useRef<Record<string, DetailFieldRefs>>({});
 
   if (initiatives.length === 0) {
     return (
@@ -64,18 +76,40 @@ export function DetailStepForm({
           key={initiative.id}
           className="rounded-lg border border-border bg-surface-2 p-4"
         >
-          <p className="mb-3 text-sm font-bold text-ink">
-            <span className="ms-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">
-              {INITIATIVE_TYPES[initiative.type as "INITIATIVE" | "PROGRAM"]
-                ?.label ?? initiative.type}
-            </span>{" "}
-            {initiative.name}
-          </p>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-sm font-bold text-ink">
+              <span className="ms-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">
+                {INITIATIVE_TYPES[initiative.type as "INITIATIVE" | "PROGRAM"]
+                  ?.label ?? initiative.type}
+              </span>{" "}
+              {initiative.name}
+            </p>
+            <AiSuggestButton
+              label="اقترح خطة التنفيذ بالذكاء الاصطناعي"
+              onGenerate={() => suggestActionItemAction(initiative.id)}
+              onResult={(data) => {
+                const refs = fieldRefs.current[initiative.id];
+                if (!refs) return;
+                if (refs.activity) refs.activity.value = data.activity;
+                if (refs.targetCategory)
+                  refs.targetCategory.value = data.targetCategory;
+                if (refs.executionRequirements)
+                  refs.executionRequirements.value = data.executionRequirements;
+                if (refs.executionDate)
+                  refs.executionDate.value = data.executionDate;
+                if (refs.responsible) refs.responsible.value = data.responsible;
+                if (refs.evidence) refs.evidence.value = data.evidence;
+              }}
+            />
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 sm:col-span-2">
               <span className="text-xs font-semibold text-muted">الأنشطة</span>
               <textarea
+                ref={(el) => {
+                  (fieldRefs.current[initiative.id] ??= {} as DetailFieldRefs).activity = el;
+                }}
                 name={`activity_${initiative.id}`}
                 defaultValue={initiative.activity}
                 rows={2}
@@ -87,6 +121,9 @@ export function DetailStepForm({
                 الفئة المستهدفة
               </span>
               <input
+                ref={(el) => {
+                  (fieldRefs.current[initiative.id] ??= {} as DetailFieldRefs).targetCategory = el;
+                }}
                 name={`category_${initiative.id}`}
                 defaultValue={initiative.targetCategory}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
@@ -97,6 +134,9 @@ export function DetailStepForm({
                 متطلبات التنفيذ
               </span>
               <input
+                ref={(el) => {
+                  (fieldRefs.current[initiative.id] ??= {} as DetailFieldRefs).executionRequirements = el;
+                }}
                 name={`requirements_${initiative.id}`}
                 defaultValue={initiative.executionRequirements}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
@@ -107,6 +147,9 @@ export function DetailStepForm({
                 تاريخ التنفيذ
               </span>
               <input
+                ref={(el) => {
+                  (fieldRefs.current[initiative.id] ??= {} as DetailFieldRefs).executionDate = el;
+                }}
                 name={`date_${initiative.id}`}
                 defaultValue={initiative.executionDate}
                 placeholder="مثال: الفصل الدراسي الأول"
@@ -118,6 +161,9 @@ export function DetailStepForm({
                 التنفيذ والمسؤولية
               </span>
               <input
+                ref={(el) => {
+                  (fieldRefs.current[initiative.id] ??= {} as DetailFieldRefs).responsible = el;
+                }}
                 name={`responsible_${initiative.id}`}
                 defaultValue={initiative.responsible}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
@@ -126,6 +172,9 @@ export function DetailStepForm({
             <label className="flex flex-col gap-1 sm:col-span-2">
               <span className="text-xs font-semibold text-muted">الشواهد</span>
               <input
+                ref={(el) => {
+                  (fieldRefs.current[initiative.id] ??= {} as DetailFieldRefs).evidence = el;
+                }}
                 name={`evidence_${initiative.id}`}
                 defaultValue={initiative.evidence}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"

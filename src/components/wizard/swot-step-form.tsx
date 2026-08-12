@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { saveSwotItemsAction } from "@/app/actions/wizard";
+import { suggestSwotItemsAction } from "@/app/actions/ai";
 import type { ActionState } from "@/app/actions/auth";
 import { ErrorNotice } from "@/components/form-controls";
 import { SubmitButton } from "@/components/submit-button";
@@ -29,7 +30,18 @@ export function SwotStepForm({
     <form action={formAction} className="flex flex-col gap-4">
       <p className="text-sm text-muted">{hint}</p>
 
-      <RepeatableList name="items" initialItems={items} addLabel="إضافة بند" />
+      <RepeatableList
+        name="items"
+        initialItems={items}
+        addLabel="إضافة بند"
+        aiSuggest={{
+          label: "اقترح بنودًا بالذكاء الاصطناعي",
+          onGenerate: () =>
+            suggestSwotItemsAction(
+              category as "STRENGTH" | "WEAKNESS" | "OPPORTUNITY" | "THREAT"
+            ),
+        }}
+      />
 
       <ErrorNotice message={state.error} />
 
