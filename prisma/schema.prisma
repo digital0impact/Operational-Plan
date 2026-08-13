@@ -58,6 +58,7 @@ model School {
   swotItems        SwotItem[]
   keyIssues        KeyIssue[]
   evaluations      Evaluation[]
+  classroomVisits  ClassroomVisit[]
 
   @@map("schools")
 }
@@ -262,4 +263,25 @@ model ProcedureInput {
 
   @@unique([schoolId, type])
   @@map("procedure_inputs")
+}
+
+/// زيارة صفية تُجدولها المدرسة لمعلم/ة — يُرسَل رابط رد عام (بلا تسجيل
+/// دخول) للمعلم/ة ليؤكّد الزيارة أو يطلب إعادة جدولتها
+model ClassroomVisit {
+  id            String    @id @default(cuid())
+  teacherName   String // اسم المعلم/ة
+  subject       String? // المادة
+  className     String? // الصف/الشعبة
+  scheduledAt   DateTime // التاريخ والوقت المقترح للزيارة
+  purpose       String? // الغرض من الزيارة / ملاحظات المدرسة
+  status        String    @default("SCHEDULED") // SCHEDULED | CONFIRMED | RESCHEDULE_REQUESTED
+  responseToken String    @unique // رابط رد المعلم/ة العام
+  responseNote  String? // ملاحظة المعلم/ة عند الرد (خصوصًا عند طلب إعادة الجدولة)
+  respondedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("classroom_visits")
 }

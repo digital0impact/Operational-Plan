@@ -90,6 +90,12 @@ export const REVIEWER_ROLE_LABELS: Record<string, string> = {
   OTHER: "أخرى",
 };
 
+export const VISIT_STATUS_LABELS: Record<string, string> = {
+  SCHEDULED: "بانتظار رد المعلم/ة",
+  CONFIRMED: "مؤكَّدة",
+  RESCHEDULE_REQUESTED: "طُلب إعادة جدولة",
+};
+
 export const INITIATIVE_TYPES = {
   INITIATIVE: { value: "INITIATIVE", label: "مبادرة", step: 14 },
   PROGRAM: { value: "PROGRAM", label: "برنامج", step: 15 },

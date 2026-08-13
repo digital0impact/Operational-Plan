@@ -14,14 +14,24 @@ export function TopBar({
   return (
     <header className="border-b border-border bg-surface">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-lg text-accent-ink">
-            🏫
-          </span>
-          <span className="hidden text-sm font-bold text-ink sm:block">
-            منصة الخطة التشغيلية
-          </span>
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-lg text-accent-ink">
+              🏫
+            </span>
+            <span className="hidden text-sm font-bold text-ink sm:block">
+              منصة الخطة التشغيلية
+            </span>
+          </Link>
+          <nav className="hidden items-center gap-4 text-sm sm:flex">
+            <Link href="/dashboard" className="text-ink hover:text-accent">
+              الرئيسية
+            </Link>
+            <Link href="/visits" className="text-ink hover:text-accent">
+              الزيارات الصفية
+            </Link>
+          </nav>
+        </div>
 
         <div className="flex items-center gap-3">
           <div className="text-left">
