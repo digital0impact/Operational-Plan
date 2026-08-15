@@ -11,6 +11,13 @@ import {
   SCHOOL_GENDER_OPTIONS,
   SCHOOL_STAGE_OPTIONS,
 } from "@/lib/constants";
+import {
+  CURRENT_ACADEMIC_YEAR,
+  OPERATIONAL_PLAN_TITLE,
+  calculateOperationalProgressPercent,
+  deriveOperationalPlanStatus,
+  ensureOperationalPlanFoundation,
+} from "@/lib/plans";
 
 export type ActionState = { error: string | null };
 
@@ -97,6 +104,25 @@ export async function registerSchoolAction(
         unit: data.stage,
         voteToken: generatePublicToken(),
         shareToken: generatePublicToken(),
+      },
+    });
+
+    const { planType, template } = await ensureOperationalPlanFoundation(tx);
+
+    await tx.plan.upsert({
+      where: { schoolId_planTypeId: { schoolId: school.id, planTypeId: planType.id } },
+      update: {},
+      create: {
+        schoolId: school.id,
+        planTypeId: planType.id,
+        templateId: template.id,
+        academicYear: CURRENT_ACADEMIC_YEAR,
+        title: OPERATIONAL_PLAN_TITLE,
+        status: deriveOperationalPlanStatus(0, school.currentStep),
+        currentStep: school.currentStep,
+        progressPercent: calculateOperationalProgressPercent(0),
+        shareToken: school.shareToken,
+        voteToken: school.voteToken,
       },
     });
 

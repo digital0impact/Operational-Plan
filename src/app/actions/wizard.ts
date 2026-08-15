@@ -13,6 +13,7 @@ import {
   TOTAL_WIZARD_STEPS,
 } from "@/lib/constants";
 import type { ActionState } from "@/app/actions/auth";
+import { syncOperationalPlanProgress } from "@/lib/plans";
 
 async function requireSchoolId(): Promise<string> {
   const user = await getCurrentUser();
@@ -23,7 +24,7 @@ async function requireSchoolId(): Promise<string> {
 }
 
 /** يسجّل إتمام خطوة، ويدفع مؤشر "أبعد خطوة تم بلوغها" للمدرسة. */
-async function markStepComplete(schoolId: string, step: number) {
+async function markStepComplete(schoolId: string, step: number, completedByUserId?: string) {
   await prisma.wizardStepProgress.upsert({
     where: { schoolId_step: { schoolId, step } },
     update: {},
@@ -41,6 +42,8 @@ async function markStepComplete(schoolId: string, step: number) {
       data: { currentStep: next },
     });
   }
+
+  await syncOperationalPlanProgress(schoolId, step, completedByUserId);
 }
 
 const optionalText = (max: number) =>
