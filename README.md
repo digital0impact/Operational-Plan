@@ -70,12 +70,24 @@
 - ✅ **أساس منصة الخطط المتعددة** (`/admin/plan-types`, دور
   `GENERAL_ADMIN`) — المرحلة الأولى من خطة توسيع المنصة لدعم أنواع خطط
   مدرسية أخرى (نشاط طلابي، إرشاد، إذاعة مدرسية...) إلى جانب الخطة
-  التشغيلية. تُدار من هنا كبيانات فقط: `PlanType` (نوع الخطة)، `PlanTemplate`
-  (قالب مُرقَّم بالنسخة)، و`PlanTemplateSection` (أقسام القالب، كل قسم من
-  نوع مغلق معروف للكود مثل `SWOT_GRID` أو `DETAIL_TABLE`). **إضافية بالكامل
-  ولا يقرأها معالج `/wizard` الحالي بعد** — إنشاء أو حذف نوع خطة هنا لا يمسّ
-  أي مدرسة أو خطة قائمة. انظر تدقيق المعمار المنشور لتفاصيل الخطوات
-  التالية (تشغيل نوع خطة جديد فعليًا على معمار عام).
+  التشغيلية، بمعزل تام عنها. تُدار من هنا كبيانات فقط: `PlanType` (نوع
+  الخطة)، `PlanTemplate` (قالب مُرقَّم بالنسخة)، و`PlanTemplateSection`
+  (أقسام القالب، كل قسم من نوع مغلق معروف للكود مثل `SWOT_GRID` أو
+  `DETAIL_TABLE`). إنشاء أو حذف نوع خطة هنا لا يمسّ أي مدرسة أو خطة قائمة،
+  ولا يمسّ معالج `/wizard` الحالي بأي حال.
+- ✅ **معمار الخطط العام** (`/plans/new`, `/plans/[planId]/[sectionKey]`) —
+  يشغّل فعليًا أي نوع خطة أُنشئ من `/admin/plan-types` (باستثناء الخطة
+  التشغيلية، التي تبقي مسارها عبر `/wizard`): مدير المدرسة يختار نوع
+  الخطة والسنة الدراسية من `/plans/new`، ثم يُنقَل عبر أقسام القالب
+  المُعرَّفة كبيانات — بلا أي رقم خطوة مبرمَج بالكود. كل نوع قسم (`kind`)
+  له عارض عام واحد يخدم كل أنواع الخطط: `STATIC_INFO` (قسم تعريفي)،
+  `OBJECTIVES_LIST` (قائمة أهداف قابلة للتكرار)، `INDICATORS_LIST` (مؤشر +
+  قيمة مستهدفة + قيمة فعلية لكل هدف — القيمة الفعلية غير موجودة أصلًا في
+  `KPI` القديمة)، `PROGRAMS_LIST` (مبادرات/برامج قابلة للتكرار تحت كل
+  هدف)، و`DETAIL_TABLE` (تفاصيل تنفيذ + شاهد نصي لكل برنامج). أول نوع خطة
+  يعمل فعليًا على هذا المعمار هو **خطة النشاط الطلابي** (مزروعة تلقائيًا،
+  5 أقسام)، إثباتًا لصلاحية المعمار قبل تعميمه على بقية الأنواع. لوحة
+  المدرسة تعرض قسم "خطط أخرى" بتقدّم كل خطة ورابط للمتابعة أو الإنشاء.
 
 ## المكدّس التقني
 
@@ -185,19 +197,28 @@ prisma/schema.prisma        نموذج البيانات الكامل (School, Us
                              StrategicGoal, OperationalGoal, KPI, SwotItem, KeyIssue,
                              InitiativeProgram, ActionItem, ProcedureInput, WizardStepProgress)
                              + أساس منصة الخطط المتعددة (PlanType, PlanTemplate,
-                             PlanTemplateSection) — provider = postgresql
+                             PlanTemplateSection) + معمار الخطط العام (Plan,
+                             PlanSectionProgress, PlanObjective, PlanIndicator, PlanProgram,
+                             PlanActivity, PlanEvidence) — provider = postgresql
 prisma/migrations/           init_postgres (كل الجداول) + action_item_evidence_image (صورة الشاهد)
                               + classroom_visits (الزيارات الصفية)
                               + plan_type_template_foundation (أساس منصة الخطط المتعددة)
+                              + generic_plan_runtime (معمار الخطط العام)
 prisma/seed.ts               زراعة الأهداف الاستراتيجية العشرة + رمز تفعيل تجريبي
                               + نوع الخطة "operational" وقالبه وأقسامه الستة
+                              + نوع الخطة "student_activity" وقالبه وأقسامه الخمسة
 src/lib/auth-guards.ts       requireSchoolId/requireAdmin — حارسا الصلاحيات المشتركان بين
                               كل ملفات src/app/actions/*.ts
+src/lib/plan-data.ts         استعلامات معمار الخطط العام (تحميل خطة وأقسامها، بيانات كل نوع قسم)
 src/lib/                     قاعدة البيانات، الجلسات، تجزئة كلمات المرور، القوائم الثابتة،
                               استعلامات المعالج المشتركة (wizard-data.ts)
 src/app/actions/             Server Actions (تسجيل/دخول/خروج، حفظ كل خطوات المعالج الـ 25)
 src/app/actions/plan-types.ts   Server Actions لإدارة أنواع الخطط وقوالبها وأقسامها (الإدارة العامة فقط)
+src/app/actions/plans.ts     Server Actions لتشغيل الخطط على المعمار العام (إنشاء خطة، حفظ كل نوع قسم)
 src/app/(admin)/admin/plan-types/   شاشة إدارة أنواع الخطط والقوالب والأقسام
+src/app/(app)/plans/new/     اختيار نوع خطة وسنة دراسية لإنشاء خطة جديدة على المعمار العام
+src/app/(app)/plans/[planId]/[sectionKey]/   مسار عام واحد يشغّل أي نوع خطة، يوزّع
+                              كل قسم لعارضه العام حسب kind (src/components/plans/)
 src/app/(app)/dashboard/     لوحة المدرسة
 src/app/(app)/wizard/[step]/ المعالج الكامل — صفحة ديناميكية واحدة توزّع المحتوى حسب رقم الخطوة
 src/app/(app)/export/        نقطة تصدير PDF للمالك المسجّل (Route Handler)

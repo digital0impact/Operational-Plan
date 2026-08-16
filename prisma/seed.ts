@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { Prisma, PrismaClient } from "../src/generated/prisma/client";
 import { hashPassword } from "../src/lib/password";
 
 // الأهداف الاستراتيجية العشرة لوزارة التعليم — كما وردت حرفيًا في
@@ -129,31 +129,108 @@ async function main() {
     },
   ] as const;
 
-  for (const section of OPERATIONAL_SECTIONS) {
-    await prisma.planTemplateSection.upsert({
-      where: {
-        templateId_key: { templateId: operationalTemplate.id, key: section.key },
-      },
-      update: {
-        order: section.order,
-        titleAr: section.titleAr,
-        titleEn: section.titleEn,
-        kind: section.kind,
-        configJson: section.configJson,
-      },
-      create: {
-        templateId: operationalTemplate.id,
-        key: section.key,
-        order: section.order,
-        titleAr: section.titleAr,
-        titleEn: section.titleEn,
-        kind: section.kind,
-        configJson: section.configJson,
-      },
-    });
+  type SectionSeed = {
+    key: string;
+    order: number;
+    titleAr: string;
+    titleEn: string;
+    kind: string;
+    configJson: Prisma.InputJsonValue;
+  };
+
+  async function seedSections(templateId: string, sections: readonly SectionSeed[]) {
+    for (const section of sections) {
+      await prisma.planTemplateSection.upsert({
+        where: { templateId_key: { templateId, key: section.key } },
+        update: {
+          order: section.order,
+          titleAr: section.titleAr,
+          titleEn: section.titleEn,
+          kind: section.kind,
+          configJson: section.configJson,
+        },
+        create: { templateId, ...section },
+      });
+    }
   }
+
+  await seedSections(operationalTemplate.id, OPERATIONAL_SECTIONS);
   console.log(
     `تمت زراعة نوع الخطة "operational" وقالبه (${OPERATIONAL_SECTIONS.length} أقسام).`
+  );
+
+  // خطة النشاط الطلابي — أول نوع خطة يعمل فعليًا على معمار الخطط العام
+  // (Plan/PlanObjective/PlanProgram/PlanActivity/PlanIndicator، مرحلة ب)،
+  // إثباتًا لصحة المعمار قبل تعميمه على بقية أنواع الخطط.
+  const studentActivityType = await prisma.planType.upsert({
+    where: { key: "student_activity" },
+    update: { nameAr: "خطة النشاط الطلابي", nameEn: "Student Activities Plan" },
+    create: {
+      key: "student_activity",
+      nameAr: "خطة النشاط الطلابي",
+      nameEn: "Student Activities Plan",
+      isCustom: false,
+    },
+  });
+
+  const studentActivityTemplate = await prisma.planTemplate.upsert({
+    where: { planTypeId_version: { planTypeId: studentActivityType.id, version: 1 } },
+    update: { isActive: true },
+    create: { planTypeId: studentActivityType.id, version: 1, isActive: true },
+  });
+
+  // كل قسم لاحق يشير بـ objectivesSectionKey/programsSectionKey إلى القسم
+  // الذي يبني عليه — بالضبط نفس تسلسل الخطة التشغيلية (هدف ← مؤشر
+  // ومبادرات ← تفاصيل تنفيذ) لكن مُعرَّفًا كبيانات لا كخطوات مرقّمة بالكود.
+  const STUDENT_ACTIVITY_SECTIONS: readonly SectionSeed[] = [
+    {
+      key: "general_info",
+      order: 1,
+      titleAr: "معلومات عامة",
+      titleEn: "General Information",
+      kind: "STATIC_INFO",
+      configJson: {
+        description:
+          "هذا القسم تعريفي بخطة النشاط الطلابي. راجع الأقسام التالية لتسجيل أهداف الخطة، ثم مؤشرات قياسها، ثم الأنشطة والبرامج، ثم تفاصيل تنفيذها.",
+      },
+    },
+    {
+      key: "goals",
+      order: 2,
+      titleAr: "الأهداف",
+      titleEn: "Goals",
+      kind: "OBJECTIVES_LIST",
+      configJson: { itemLabel: "هدف", placeholder: "اكتب هدفًا لخطة النشاط الطلابي…" },
+    },
+    {
+      key: "indicators",
+      order: 3,
+      titleAr: "المؤشرات",
+      titleEn: "Indicators",
+      kind: "INDICATORS_LIST",
+      configJson: { objectivesSectionKey: "goals" },
+    },
+    {
+      key: "programs",
+      order: 4,
+      titleAr: "الأنشطة والبرامج",
+      titleEn: "Activities & Programs",
+      kind: "PROGRAMS_LIST",
+      configJson: { objectivesSectionKey: "goals", itemLabel: "نشاط/برنامج" },
+    },
+    {
+      key: "detail_plan",
+      order: 5,
+      titleAr: "الخطة التفصيلية",
+      titleEn: "Detailed Execution Plan",
+      kind: "DETAIL_TABLE",
+      configJson: { programsSectionKey: "programs" },
+    },
+  ] as const;
+
+  await seedSections(studentActivityTemplate.id, STUDENT_ACTIVITY_SECTIONS);
+  console.log(
+    `تمت زراعة نوع الخطة "student_activity" وقالبه (${STUDENT_ACTIVITY_SECTIONS.length} أقسام).`
   );
 
   await prisma.$disconnect();

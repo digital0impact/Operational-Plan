@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_NAME = "session_token";
-const PROTECTED_PREFIXES = ["/dashboard", "/wizard", "/export", "/admin", "/visits"];
+const PROTECTED_PREFIXES = ["/dashboard", "/wizard", "/export", "/admin", "/visits", "/plans"];
 const AUTH_PATHS = ["/login", "/register"];
 
 export function proxy(request: NextRequest) {
@@ -32,6 +32,7 @@ export const config = {
     "/admin",
     "/admin/:path*",
     "/visits",
+    "/plans/:path*",
     "/login",
     "/register",
   ],

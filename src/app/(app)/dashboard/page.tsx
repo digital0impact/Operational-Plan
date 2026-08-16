@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { getCompletedSteps } from "@/lib/wizard-data";
 import { getEvaluationSummary } from "@/lib/public-data";
+import { getSchoolPlans } from "@/lib/plan-data";
 import { CopyLink } from "@/components/copy-link";
 import {
   TOTAL_WIZARD_STEPS,
@@ -22,7 +23,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const school = user!.school!;
 
-  const [completedSteps, totalVotes, evaluations, evalSummary] = await Promise.all([
+  const [completedSteps, totalVotes, evaluations, evalSummary, otherPlans] = await Promise.all([
     getCompletedSteps(school.id),
     prisma.vote.count({
       where: { initiative: { operationalGoal: { schoolId: school.id } } },
@@ -33,6 +34,7 @@ export default async function DashboardPage() {
       take: 10,
     }),
     getEvaluationSummary(school.id),
+    getSchoolPlans(school.id),
   ]);
   const completedCount = completedSteps.size;
   const progressPercent = Math.round((completedCount / TOTAL_WIZARD_STEPS) * 100);
@@ -114,6 +116,57 @@ export default async function DashboardPage() {
             );
           })}
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-ink">خطط أخرى</h2>
+          <Link
+            href="/plans/new"
+            className="rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent"
+          >
+            + إنشاء خطة جديدة
+          </Link>
+        </div>
+
+        {otherPlans.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">
+            إلى جانب الخطة التشغيلية، يمكنك إنشاء أنواع خطط أخرى (كخطة النشاط
+            الطلابي) من هنا.
+          </p>
+        ) : (
+          <ul className="mt-4 flex flex-col gap-3">
+            {otherPlans.map((plan) => (
+              <li
+                key={plan.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-3.5"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-ink">
+                    {plan.planTypeName}{" "}
+                    <span className="font-normal text-muted">· {plan.academicYear}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    {plan.completedSections} من {plan.totalSections} أقسام ·{" "}
+                    {plan.progressPercent}%
+                  </p>
+                </div>
+                {plan.status === "COMPLETE" ? (
+                  <span className="rounded-lg bg-accent-soft px-3.5 py-2 text-xs font-semibold text-accent">
+                    مكتملة ✓
+                  </span>
+                ) : (
+                  <Link
+                    href={`/plans/${plan.id}/${plan.nextSectionKey}`}
+                    className="rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink transition hover:opacity-90"
+                  >
+                    متابعة
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
