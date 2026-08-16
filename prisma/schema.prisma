@@ -1,8 +1,13 @@
 // Prisma schema — منصة الخطة التشغيلية لمدارس التعليم العام
 // المرحلة الحالية: تسجيل المدرسة + تسجيل الدخول + معالج الخطة الكامل (25 خطوة)
+// + أساس منصة الخطط المتعددة (PlanType/PlanTemplate/PlanTemplateSection):
+// جداول بيانات فقط حتى الآن، لا يقرأها أي مسار حالي — انظر تدقيق المعمار
+// المنشور. معالج الخطة التشغيلية الحالي يواصل العمل على جداوله الخاصة دون
+// أي تغيير.
 //
 // الكيانات اللاحقة (خارج نطاق هذا الإصدار، انظر خطة المعمار المنشورة):
-// PlanExport
+// PlanExport، ثم لاحقًا: Plan/PlanObjective/PlanProgram/PlanActivity/
+// PlanIndicator/PlanEvidence لتشغيل أنواع الخطط الجديدة فعليًا
 
 generator client {
   provider = "prisma-client"
@@ -284,4 +289,64 @@ model ClassroomVisit {
   school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("classroom_visits")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// أساس منصة الخطط المتعددة (مرحلة أ من خطة المعمار)
+//
+// الجداول الثلاثة التالية إضافية بالكامل: لا تُعدِّل أي جدول قائم أعلاه،
+// ولا يقرأها أي مسار أو Server Action حالي. الهدف هو جعل "نوع الخطة" و
+// "أقسامها" بيانات تُدار من لوحة الإدارة بدل ثوابت TypeScript، تمهيدًا
+// لتشغيل أنواع خطط جديدة (نشاط طلابي، إرشاد، إذاعة...) على معمار عام لاحقًا
+// — دون المساس بمعالج الخطة التشغيلية الحالي.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// نوع خطة مدرسية (تشغيلية، نشاط طلابي، إرشاد طلابي، إذاعة مدرسية...)
+model PlanType {
+  id        String   @id @default(cuid())
+  key       String   @unique // معرّف ثابت بالإنجليزية، مثل operational
+  nameAr    String
+  nameEn    String
+  isCustom  Boolean  @default(false) // نوع خطة أنشأته مدرسة بنفسها لا الإدارة العامة
+  createdAt DateTime @default(now())
+
+  templates PlanTemplate[]
+
+  @@map("plan_types")
+}
+
+/// قالب (نسخة) من نوع خطة — يسمح بتحديث دليل الإجراء لعام جديد دون كسر
+/// الخطط القائمة المرتبطة بالنسخة السابقة
+model PlanTemplate {
+  id        String   @id @default(cuid())
+  version   Int      @default(1)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  planTypeId String
+  planType   PlanType @relation(fields: [planTypeId], references: [id], onDelete: Cascade)
+
+  sections PlanTemplateSection[]
+
+  @@unique([planTypeId, version])
+  @@map("plan_templates")
+}
+
+/// قسم ضمن قالب خطة — kind من مجموعة مغلقة يعرفها الكود (انظر تدقيق
+/// المعمار، المرحلة 7)، وconfigJson يحمل ضبط القسم (تسميات الحقول، حد
+/// التكرار، تفعيل اقتراح الذكاء الاصطناعي...) دون الحاجة لتعديل الكود
+model PlanTemplateSection {
+  id       String  @id @default(cuid())
+  key      String // معرّف القسم داخل القالب، مثل swot أو detail_table
+  order    Int     @default(0)
+  titleAr  String
+  titleEn  String?
+  kind     String // STATIC_INFO | ACKNOWLEDGEMENT_LIST | REFERENCE_LIST | OBJECTIVES_LIST | INDICATORS_LIST | SWOT_GRID | REPEATABLE_TEXT_LIST | PROGRAMS_LIST | DETAIL_TABLE
+  configJson Json?
+
+  templateId String
+  template   PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, key])
+  @@map("plan_template_sections")
 }

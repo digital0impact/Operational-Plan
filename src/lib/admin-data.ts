@@ -65,3 +65,19 @@ export async function getAdminOverview() {
     },
   };
 }
+
+/**
+ * كل أنواع الخطط مع قوالبها وأقسامها — أساس منصة الخطط المتعددة (مرحلة أ).
+ * لا تُستهلَك بعد إلا من `/admin/plan-types`.
+ */
+export async function getPlanTypesOverview() {
+  return prisma.planType.findMany({
+    orderBy: { createdAt: "asc" },
+    include: {
+      templates: {
+        orderBy: { version: "desc" },
+        include: { sections: { orderBy: { order: "asc" } } },
+      },
+    },
+  });
+}

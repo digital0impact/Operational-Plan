@@ -3,17 +3,9 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireAdmin } from "@/lib/auth-guards";
 import { generateActivationCode } from "@/lib/tokens";
 import type { ActionState } from "@/app/actions/auth";
-
-async function requireAdmin() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "GENERAL_ADMIN") {
-    redirect("/login");
-  }
-  return user;
-}
 
 const generateCodesSchema = z.object({
   count: z.coerce.number().int().min(1).max(50),

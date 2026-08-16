@@ -3,17 +3,9 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireSchoolId } from "@/lib/auth-guards";
 import { generatePublicToken } from "@/lib/tokens";
 import type { ActionState } from "@/app/actions/auth";
-
-async function requireSchoolId(): Promise<string> {
-  const user = await getCurrentUser();
-  if (!user?.schoolId) {
-    redirect("/login");
-  }
-  return user.schoolId;
-}
 
 const optionalText = (max: number) =>
   z

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireSchoolId } from "@/lib/auth-guards";
 import {
   BUILDING_INDEPENDENCE_OPTIONS,
   BUILDING_TYPE_OPTIONS,
@@ -13,14 +13,6 @@ import {
   TOTAL_WIZARD_STEPS,
 } from "@/lib/constants";
 import type { ActionState } from "@/app/actions/auth";
-
-async function requireSchoolId(): Promise<string> {
-  const user = await getCurrentUser();
-  if (!user?.schoolId) {
-    redirect("/login");
-  }
-  return user.schoolId;
-}
 
 /** يسجّل إتمام خطوة، ويدفع مؤشر "أبعد خطوة تم بلوغها" للمدرسة. */
 async function markStepComplete(schoolId: string, step: number) {

@@ -21,6 +21,9 @@ export function AdminTopBar({ userName }: { userName: string }) {
             <Link href="/admin/codes" className="text-ink hover:text-accent">
               رموز التفعيل
             </Link>
+            <Link href="/admin/plan-types" className="text-ink hover:text-accent">
+              أنواع الخطط
+            </Link>
           </nav>
         </div>
 

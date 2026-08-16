@@ -67,6 +67,15 @@
   البيانات هي مصدر الحقيقة فلا يمكن الرد مرتين على نفس الرابط. لوحة
   المدرسة تعرض حالة كل زيارة (بانتظار الرد / مؤكَّدة / طُلب إعادة جدولة)
   وملاحظة المعلم/ة إن وُجدت، مع رابط نسخ سريع لكل زيارة وإمكانية الحذف.
+- ✅ **أساس منصة الخطط المتعددة** (`/admin/plan-types`, دور
+  `GENERAL_ADMIN`) — المرحلة الأولى من خطة توسيع المنصة لدعم أنواع خطط
+  مدرسية أخرى (نشاط طلابي، إرشاد، إذاعة مدرسية...) إلى جانب الخطة
+  التشغيلية. تُدار من هنا كبيانات فقط: `PlanType` (نوع الخطة)، `PlanTemplate`
+  (قالب مُرقَّم بالنسخة)، و`PlanTemplateSection` (أقسام القالب، كل قسم من
+  نوع مغلق معروف للكود مثل `SWOT_GRID` أو `DETAIL_TABLE`). **إضافية بالكامل
+  ولا يقرأها معالج `/wizard` الحالي بعد** — إنشاء أو حذف نوع خطة هنا لا يمسّ
+  أي مدرسة أو خطة قائمة. انظر تدقيق المعمار المنشور لتفاصيل الخطوات
+  التالية (تشغيل نوع خطة جديد فعليًا على معمار عام).
 
 ## المكدّس التقني
 
@@ -175,13 +184,20 @@ Chromium مضغوط مخصَّص لبيئات serverless، يُستخرَج إل
 prisma/schema.prisma        نموذج البيانات الكامل (School, User, Session, ActivationCode,
                              StrategicGoal, OperationalGoal, KPI, SwotItem, KeyIssue,
                              InitiativeProgram, ActionItem, ProcedureInput, WizardStepProgress)
-                             — provider = postgresql
+                             + أساس منصة الخطط المتعددة (PlanType, PlanTemplate,
+                             PlanTemplateSection) — provider = postgresql
 prisma/migrations/           init_postgres (كل الجداول) + action_item_evidence_image (صورة الشاهد)
                               + classroom_visits (الزيارات الصفية)
+                              + plan_type_template_foundation (أساس منصة الخطط المتعددة)
 prisma/seed.ts               زراعة الأهداف الاستراتيجية العشرة + رمز تفعيل تجريبي
+                              + نوع الخطة "operational" وقالبه وأقسامه الستة
+src/lib/auth-guards.ts       requireSchoolId/requireAdmin — حارسا الصلاحيات المشتركان بين
+                              كل ملفات src/app/actions/*.ts
 src/lib/                     قاعدة البيانات، الجلسات، تجزئة كلمات المرور، القوائم الثابتة،
                               استعلامات المعالج المشتركة (wizard-data.ts)
 src/app/actions/             Server Actions (تسجيل/دخول/خروج، حفظ كل خطوات المعالج الـ 25)
+src/app/actions/plan-types.ts   Server Actions لإدارة أنواع الخطط وقوالبها وأقسامها (الإدارة العامة فقط)
+src/app/(admin)/admin/plan-types/   شاشة إدارة أنواع الخطط والقوالب والأقسام
 src/app/(app)/dashboard/     لوحة المدرسة
 src/app/(app)/wizard/[step]/ المعالج الكامل — صفحة ديناميكية واحدة توزّع المحتوى حسب رقم الخطوة
 src/app/(app)/export/        نقطة تصدير PDF للمالك المسجّل (Route Handler)

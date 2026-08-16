@@ -139,6 +139,24 @@ export const WIZARD_STEP_TITLES: Record<number, string> = {
   25: "الخطة التفصيلية",
 };
 
+/**
+ * أنواع الأقسام (SectionKind) المغلقة التي يعرف الكود كيف يعرضها —
+ * أساس منصة الخطط المتعددة (مرحلة أ). كل قسم في PlanTemplateSection يختار
+ * أحد هذه الأنواع، وconfigJson يحمل تفاصيله دون الحاجة لتعديل الكود.
+ * انظر تدقيق المعمار، المرحلة 7، لتفاصيل كل نوع.
+ */
+export const PLAN_SECTION_KINDS = [
+  { value: "STATIC_INFO", label: "بيانات ثابتة" },
+  { value: "ACKNOWLEDGEMENT_LIST", label: "قائمة إقرارات" },
+  { value: "REFERENCE_LIST", label: "قائمة مرجعية (للعرض فقط)" },
+  { value: "OBJECTIVES_LIST", label: "قائمة أهداف" },
+  { value: "INDICATORS_LIST", label: "قائمة مؤشرات" },
+  { value: "SWOT_GRID", label: "شبكة SWOT" },
+  { value: "REPEATABLE_TEXT_LIST", label: "قائمة نصية قابلة للتكرار" },
+  { value: "PROGRAMS_LIST", label: "قائمة مبادرات/برامج" },
+  { value: "DETAIL_TABLE", label: "جدول تفصيلي" },
+] as const;
+
 export const TOTAL_WIZARD_STEPS = 25;
 export const IMPLEMENTED_WIZARD_STEPS = 25;
 

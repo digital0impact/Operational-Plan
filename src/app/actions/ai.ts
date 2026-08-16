@@ -1,7 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/session";
+import { requireSchoolId } from "@/lib/auth-guards";
 import type { AiResult } from "@/lib/ai/generate";
 import {
   suggestActionItem,
@@ -17,14 +16,6 @@ import {
  * المعالج (زر يستدعي الدالة ثم يملأ الحقل بالنتيجة، بلا إرسال نموذج).
  * كل دالة تتحقق من الجلسة وملكية المدرسة قبل تمرير الطلب إلى Claude.
  */
-
-async function requireSchoolId(): Promise<string> {
-  const user = await getCurrentUser();
-  if (!user?.schoolId) {
-    redirect("/login");
-  }
-  return user.schoolId;
-}
 
 export async function suggestOperationalGoalAction(
   strategicGoalId: string
