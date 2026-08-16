@@ -184,6 +184,10 @@ export async function getDetailPlanData(
         executionRequirements: activity?.executionRequirements ?? "",
         executionDate: activity?.executionDate ?? "",
         responsible: activity?.responsible ?? "",
+        supervisor: activity?.supervisor ?? "",
+        estimatedBudget: activity?.estimatedBudget ?? "",
+        regulatorySecurityRequirements: activity?.regulatorySecurityRequirements ?? "",
+        planningNote: activity?.planningNote ?? "",
         evidence: activity?.evidence[0]?.textValue ?? "",
       };
     }),

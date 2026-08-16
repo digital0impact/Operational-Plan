@@ -462,6 +462,14 @@ model PlanActivity {
   status                String @default("PLANNED") // PLANNED | IN_PROGRESS | DONE
   order                 Int    @default(0)
 
+  // حقول أضافها دليل إجراءات عمل مدارس التعليم العام — الإصدار الرابع
+  // (رجب 1446هـ/يناير 2025م) صراحةً لخطة النشاط الطالبي (إجراء تنفيذ
+  // برامج النشاط الطالبي)، وتعمّم على أي قسم DETAIL_TABLE في أي نوع خطة
+  supervisor                     String @default("") // المشرف — يُختار وفق التخصص والخبرات والمهارات
+  estimatedBudget                String @default("") // الميزانية التقديرية للنشاط
+  regulatorySecurityRequirements String @default("") // الاشتراطات النظامية والأمنية
+  planningNote                   String @default("") // ملاحظة تخطيط — موافقة إدارة التعليم لبرنامج خارج الخطة، أو ارتباطه بمناسبة محلية/دولية
+
   programId String
   program   PlanProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
 

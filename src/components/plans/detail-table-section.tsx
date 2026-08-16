@@ -19,6 +19,10 @@ type ObjectiveDetailRow = {
     executionRequirements: string;
     executionDate: string;
     responsible: string;
+    supervisor: string;
+    estimatedBudget: string;
+    regulatorySecurityRequirements: string;
+    planningNote: string;
     evidence: string;
   }[];
 };
@@ -97,6 +101,49 @@ export function DetailTableSection({
                       <input
                         name={`responsible_${program.programId}`}
                         defaultValue={program.responsible}
+                        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-semibold text-muted">
+                        المشرف
+                      </span>
+                      <input
+                        name={`supervisor_${program.programId}`}
+                        defaultValue={program.supervisor}
+                        placeholder="يُختار وفق التخصص والخبرات والمهارات"
+                        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-semibold text-muted">
+                        الميزانية التقديرية
+                      </span>
+                      <input
+                        name={`budget_${program.programId}`}
+                        defaultValue={program.estimatedBudget}
+                        placeholder="مثال: 2000 ريال"
+                        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-semibold text-muted">
+                        الاشتراطات النظامية والأمنية
+                      </span>
+                      <input
+                        name={`regulatory_${program.programId}`}
+                        defaultValue={program.regulatorySecurityRequirements}
+                        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 sm:col-span-2">
+                      <span className="text-xs font-semibold text-muted">
+                        ملاحظة تخطيط (موافقة إدارة التعليم لبرنامج خارج الخطة، أو ارتباطه
+                        بمناسبة محلية/دولية)
+                      </span>
+                      <input
+                        name={`planningNote_${program.programId}`}
+                        defaultValue={program.planningNote}
                         className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
                       />
                     </label>

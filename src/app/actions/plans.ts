@@ -271,6 +271,12 @@ export async function savePlanDetailSectionAction(
         executionRequirements: ((formData.get(`requirements_${p.id}`) as string) ?? "").trim(),
         executionDate: ((formData.get(`date_${p.id}`) as string) ?? "").trim(),
         responsible: ((formData.get(`responsible_${p.id}`) as string) ?? "").trim(),
+        supervisor: ((formData.get(`supervisor_${p.id}`) as string) ?? "").trim(),
+        estimatedBudget: ((formData.get(`budget_${p.id}`) as string) ?? "").trim(),
+        regulatorySecurityRequirements: (
+          (formData.get(`regulatory_${p.id}`) as string) ?? ""
+        ).trim(),
+        planningNote: ((formData.get(`planningNote_${p.id}`) as string) ?? "").trim(),
       };
       const activity = await tx.planActivity.upsert({
         where: { programId_order: { programId: p.id, order: 0 } },
