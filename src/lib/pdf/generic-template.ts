@@ -5,7 +5,7 @@ import {
   findLabel,
 } from "@/lib/constants";
 import { getArabicFontFaceCss } from "@/lib/pdf/fonts";
-import type { PlanExportData, PlanExportSection } from "@/lib/plan-data";
+import type { PlanExportData, PlanExportSection, SectionExportData } from "@/lib/plan-data";
 
 // ملاحظة: هذا الملف مستقل تمامًا عن src/lib/pdf/template.ts (قالب الخطة
 // التشغيلية القديم) عمدًا — بأدوات مساعدة (esc/cell/numberedList) مكرَّرة
@@ -222,13 +222,8 @@ function renderSection(section: PlanExportSection): string {
   }
 }
 
-export function buildGenericPlanHtml(data: PlanExportData): string {
+function sharedStyles(): string {
   return `
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8" />
-<style>
   ${getArabicFontFaceCss()}
 
   * { box-sizing: border-box; }
@@ -256,6 +251,14 @@ export function buildGenericPlanHtml(data: PlanExportData): string {
   .cover-box .school-name { font-size: 18px; font-weight: bold; margin: 6px 0; }
   .cover-box .row { color: #56706e; font-size: 12px; margin: 4px 0; }
   .cover-footer { text-align: center; color: #8a9c9a; font-size: 10.5px; margin-top: 60px; }
+
+  .banner {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid #0f6e63;
+    padding-bottom: 6px; margin-bottom: 14px;
+    font-size: 10.5px; color: #56706e;
+  }
+  .banner b { color: #0f6e63; }
 
   h2.section-title {
     font-size: 15px; color: #0f6e63; border-bottom: 1px solid #cbdad7;
@@ -289,29 +292,90 @@ export function buildGenericPlanHtml(data: PlanExportData): string {
   .grid-table .grid-row-header { width: 15%; background: #f4f7f6; color: #14231f; font-weight: bold; }
   .grid-table thead .grid-row-header { background: #e2eeeb; color: #0f6e63; }
   .grid-table .grid-week-date { font-weight: normal; color: #56706e; font-size: 8.5px; }
-</style>
-</head>
-<body>
+  `;
+}
 
+function coverSection(
+  planTypeName: string,
+  academicYear: string,
+  schoolName: string,
+  schoolUnit: string,
+  schoolGender: string,
+  schoolSystem: string,
+  generatedAt: Date
+): string {
+  return `
   <section class="doc-page">
-    <h1 class="cover-title">${esc(data.planTypeName)}</h1>
-    <p class="cover-sub">العام الدراسي ${esc(data.academicYear)}</p>
+    <h1 class="cover-title">${esc(planTypeName)}</h1>
+    <p class="cover-sub">العام الدراسي ${esc(academicYear)}</p>
 
     <div class="cover-box">
       <div class="row">مدرسة</div>
-      <div class="school-name">${cell(data.schoolName)}</div>
-      <div class="row">${cell(findLabel(SCHOOL_STAGE_OPTIONS, data.schoolUnit))} ·
-        ${cell(findLabel(SCHOOL_GENDER_OPTIONS, data.schoolGender))} ·
-        ${cell(findLabel(SCHOOL_CLASSIFICATION_OPTIONS, data.schoolSystem))}</div>
+      <div class="school-name">${cell(schoolName)}</div>
+      <div class="row">${cell(findLabel(SCHOOL_STAGE_OPTIONS, schoolUnit))} ·
+        ${cell(findLabel(SCHOOL_GENDER_OPTIONS, schoolGender))} ·
+        ${cell(findLabel(SCHOOL_CLASSIFICATION_OPTIONS, schoolSystem))}</div>
     </div>
 
     <p class="cover-footer">
       أُنشئت هذه الوثيقة آليًا عبر منصة تخطيط بتاريخ
-      ${new Intl.DateTimeFormat("ar", { dateStyle: "long" }).format(data.generatedAt)}
+      ${new Intl.DateTimeFormat("ar", { dateStyle: "long" }).format(generatedAt)}
     </p>
-  </section>
+  </section>`;
+}
+
+export function buildGenericPlanHtml(data: PlanExportData): string {
+  return `
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<style>${sharedStyles()}</style>
+</head>
+<body>
+
+  ${coverSection(
+    data.planTypeName,
+    data.academicYear,
+    data.schoolName,
+    data.schoolUnit,
+    data.schoolGender,
+    data.schoolSystem,
+    data.generatedAt
+  )}
 
   ${data.sections.map(renderSection).join("")}
+
+</body>
+</html>
+`;
+}
+
+/**
+ * يبني صفحة PDF لقسم واحد فقط بمعزل عن باقي الخطة — مثلًا تنزيل الجدول
+ * الأسبوعي وحده دون بقية أقسام خطة النشاط الطلابي. يعيد استخدام نفس
+ * renderSection ونفس الأنماط البصرية، بترويسة شريط واحدة (لا صفحة غلاف
+ * كاملة). الشريط والتاريخ يسبقان .doc-page الذي يبنيه renderSection كإخوة
+ * لا كأبناء — حتى يبقى .doc-page آخر عنصر فعليًا في body، فيعمل انتقاء
+ * `:last-child` في sharedStyles (بلا فاصل صفحة زائد بعده) كما هو مصمَّم.
+ */
+export function buildSectionOnlyHtml(data: SectionExportData): string {
+  return `
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<style>${sharedStyles()}</style>
+</head>
+<body>
+
+  <div class="banner">
+    <span>${esc(data.schoolName)} · العام الدراسي ${esc(data.academicYear)} ·
+      أُنشئت آليًا عبر منصة تخطيط بتاريخ
+      ${new Intl.DateTimeFormat("ar", { dateStyle: "long" }).format(data.generatedAt)}</span>
+    <b>${esc(data.planTypeName)}</b>
+  </div>
+  ${renderSection(data.section)}
 
 </body>
 </html>

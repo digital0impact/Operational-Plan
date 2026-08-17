@@ -143,9 +143,13 @@
   لها الآن تصدير PDF خاص بها (`/plans/[planId]/export`): قالب HTML عام
   منفصل تمامًا عن قالب الخطة التشغيلية (`src/lib/pdf/generic-template.ts`)
   يبني صفحة لكل قسم من أقسام القالب حسب نوعه (`STATIC_INFO` نصًا تعريفيًا،
-  `OBJECTIVES_LIST`/`INDICATORS_LIST`/`PROGRAMS_LIST` جداول، و`DETAIL_TABLE`
-  بطاقة تفصيلية لكل برنامج بكامل حقوله العشرة) — بنفس هوية الخط والألوان
-  البصرية لتصدير الخطة التشغيلية، دون المساس بملفه.
+  `OBJECTIVES_LIST`/`INDICATORS_LIST`/`PROGRAMS_LIST` جداول، `DETAIL_TABLE`
+  بطاقة تفصيلية لكل برنامج بكامل حقوله العشرة، و`WEEKLY_ACTIVITY_GRID` جداول
+  الأسبوعية) — بنفس هوية الخط والألوان البصرية لتصدير الخطة التشغيلية، دون
+  المساس بملفه. كل قسم قابل أيضًا للتنزيل **بمعزل عن باقي الخطة**
+  (`/plans/[planId]/[sectionKey]/export`، نفس التحقّق من الجلسة والملكية) —
+  مفيد خصوصًا لجدول أسبوعي واسع يريد مدير المدرسة طباعته أو مشاركته وحده؛
+  زر "تنزيل هذا الجدول PDF" ظاهر مباشرة أعلى قسم الجدول الأسبوعي.
 
 ## المكدّس التقني
 
@@ -282,6 +286,7 @@ src/app/(app)/plans/new/     اختيار نوع خطة وسنة دراسية ل
 src/app/(app)/plans/[planId]/[sectionKey]/   مسار عام واحد يشغّل أي نوع خطة، يوزّع
                               كل قسم لعارضه العام حسب kind (src/components/plans/)
 src/app/(app)/plans/[planId]/export/   نقطة تصدير PDF لأي خطة على المعمار العام (Route Handler)
+src/app/(app)/plans/[planId]/[sectionKey]/export/   نقطة تصدير PDF لقسم واحد بمعزل عن باقي الخطة
 src/app/(app)/dashboard/     لوحة المدرسة
 src/app/(app)/wizard/[step]/ المعالج الكامل — صفحة ديناميكية واحدة توزّع المحتوى حسب رقم الخطوة
 src/app/(app)/export/        نقطة تصدير PDF للخطة التشغيلية للمالك المسجّل (Route Handler)

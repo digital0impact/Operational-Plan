@@ -7,8 +7,8 @@ import {
   getSwotItems,
 } from "@/lib/wizard-data";
 import { buildPlanHtml, type PlanData } from "@/lib/pdf/template";
-import { buildGenericPlanHtml } from "@/lib/pdf/generic-template";
-import { getPlanExportData } from "@/lib/plan-data";
+import { buildGenericPlanHtml, buildSectionOnlyHtml } from "@/lib/pdf/generic-template";
+import { getPlanExportData, getSectionExportData } from "@/lib/plan-data";
 
 /**
  * خيارات تشغيل Chromium حسب البيئة:
@@ -132,5 +132,19 @@ export async function renderGenericPlanPdf(
   const data = await getPlanExportData(schoolId, planId);
   if (!data) return null;
   const html = buildGenericPlanHtml(data);
+  return renderHtmlToPdf(html);
+}
+
+/** تصدير PDF لقسم واحد بمعزل عن باقي الخطة (مثل الجدول الأسبوعي وحده) —
+ * يُعيد null إن لم توجد الخطة/القسم أو لم تكن ملكًا لهذه المدرسة أو كان
+ * نوع القسم غير مدعوم في التصدير (تحقّق ذلك كله في getSectionExportData). */
+export async function renderPlanSectionPdf(
+  schoolId: string,
+  planId: string,
+  sectionKey: string
+): Promise<Buffer | null> {
+  const data = await getSectionExportData(schoolId, planId, sectionKey);
+  if (!data) return null;
+  const html = buildSectionOnlyHtml(data);
   return renderHtmlToPdf(html);
 }

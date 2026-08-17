@@ -290,6 +290,72 @@ export type PlanExportData = {
 };
 
 /**
+ * يبني بيانات تصدير قسم واحد من أقسام قالب خطة — مستخرَج ليُشترَك بين تصدير
+ * الخطة الكاملة (getPlanExportData) وتصدير قسم واحد بمعزل عن الباقي
+ * (getSectionExportData). يعيد null لأنواع أقسام خاصة بالخطة التشغيلية
+ * القديمة (SWOT_GRID وغيرها) لا تُستخدَم في قوالب المعمار العام.
+ */
+async function buildExportSection(
+  templateId: string,
+  planId: string,
+  section: { key: string; titleAr: string; kind: string; configJson: unknown }
+): Promise<PlanExportSection | null> {
+  switch (section.kind) {
+    case "STATIC_INFO":
+      return {
+        kind: "STATIC_INFO",
+        key: section.key,
+        titleAr: section.titleAr,
+        description: sectionConfigString(section.configJson, "description") ?? "",
+      };
+    case "OBJECTIVES_LIST": {
+      const items = await getObjectivesForSection(planId, section.key);
+      return {
+        kind: "OBJECTIVES_LIST",
+        key: section.key,
+        titleAr: section.titleAr,
+        items: items.map((i) => i.text),
+      };
+    }
+    case "INDICATORS_LIST": {
+      const objectivesSectionKey = sectionConfigString(section.configJson, "objectivesSectionKey");
+      const rows = objectivesSectionKey
+        ? await getIndicatorsData(planId, objectivesSectionKey)
+        : [];
+      return { kind: "INDICATORS_LIST", key: section.key, titleAr: section.titleAr, rows };
+    }
+    case "PROGRAMS_LIST": {
+      const objectivesSectionKey = sectionConfigString(section.configJson, "objectivesSectionKey");
+      const data = objectivesSectionKey ? await getProgramsData(planId, objectivesSectionKey) : [];
+      return {
+        kind: "PROGRAMS_LIST",
+        key: section.key,
+        titleAr: section.titleAr,
+        objectives: data.map((o) => ({
+          order: o.order,
+          text: o.text,
+          programs: o.programs.map((p) => p.name),
+        })),
+      };
+    }
+    case "DETAIL_TABLE": {
+      const programsSectionKey = sectionConfigString(section.configJson, "programsSectionKey");
+      const objectives = programsSectionKey
+        ? await getDetailPlanData(templateId, planId, programsSectionKey)
+        : [];
+      return { kind: "DETAIL_TABLE", key: section.key, titleAr: section.titleAr, objectives };
+    }
+    case "WEEKLY_ACTIVITY_GRID": {
+      const weeksCount = sectionConfigNumber(section.configJson, "weeksCount") ?? 18;
+      const grid = await getWeeklyGridData(planId, section.key, weeksCount);
+      return { kind: "WEEKLY_ACTIVITY_GRID", key: section.key, titleAr: section.titleAr, grid };
+    }
+    default:
+      return null;
+  }
+}
+
+/**
  * يجمّع بيانات خطة كاملة (على المعمار العام) بترتيب أقسام قالبها، جاهزة
  * لبناء PDF عام يغطي أنواع الأقسام الخمسة المُنفَّذة — يعيد null إن لم توجد
  * الخطة أو لم تكن ملكًا لهذه المدرسة (نفس تحقّق الملكية في loadPlanShell).
@@ -305,86 +371,8 @@ export async function getPlanExportData(
 
   const sections: PlanExportSection[] = [];
   for (const section of shell.sections) {
-    switch (section.kind) {
-      case "STATIC_INFO": {
-        sections.push({
-          kind: "STATIC_INFO",
-          key: section.key,
-          titleAr: section.titleAr,
-          description: sectionConfigString(section.configJson, "description") ?? "",
-        });
-        break;
-      }
-      case "OBJECTIVES_LIST": {
-        const items = await getObjectivesForSection(planId, section.key);
-        sections.push({
-          kind: "OBJECTIVES_LIST",
-          key: section.key,
-          titleAr: section.titleAr,
-          items: items.map((i) => i.text),
-        });
-        break;
-      }
-      case "INDICATORS_LIST": {
-        const objectivesSectionKey = sectionConfigString(
-          section.configJson,
-          "objectivesSectionKey"
-        );
-        const rows = objectivesSectionKey
-          ? await getIndicatorsData(planId, objectivesSectionKey)
-          : [];
-        sections.push({ kind: "INDICATORS_LIST", key: section.key, titleAr: section.titleAr, rows });
-        break;
-      }
-      case "PROGRAMS_LIST": {
-        const objectivesSectionKey = sectionConfigString(
-          section.configJson,
-          "objectivesSectionKey"
-        );
-        const data = objectivesSectionKey
-          ? await getProgramsData(planId, objectivesSectionKey)
-          : [];
-        sections.push({
-          kind: "PROGRAMS_LIST",
-          key: section.key,
-          titleAr: section.titleAr,
-          objectives: data.map((o) => ({
-            order: o.order,
-            text: o.text,
-            programs: o.programs.map((p) => p.name),
-          })),
-        });
-        break;
-      }
-      case "DETAIL_TABLE": {
-        const programsSectionKey = sectionConfigString(section.configJson, "programsSectionKey");
-        const objectives = programsSectionKey
-          ? await getDetailPlanData(shell.templateId, planId, programsSectionKey)
-          : [];
-        sections.push({
-          kind: "DETAIL_TABLE",
-          key: section.key,
-          titleAr: section.titleAr,
-          objectives,
-        });
-        break;
-      }
-      case "WEEKLY_ACTIVITY_GRID": {
-        const weeksCount = sectionConfigNumber(section.configJson, "weeksCount") ?? 18;
-        const grid = await getWeeklyGridData(planId, section.key, weeksCount);
-        sections.push({
-          kind: "WEEKLY_ACTIVITY_GRID",
-          key: section.key,
-          titleAr: section.titleAr,
-          grid,
-        });
-        break;
-      }
-      default:
-        // أنواع أقسام خاصة بالخطة التشغيلية القديمة (SWOT_GRID وغيرها) لا
-        // تُستخدَم في قوالب الخطط على المعمار العام — تُتجاهَل هنا بأمان.
-        break;
-    }
+    const built = await buildExportSection(shell.templateId, planId, section);
+    if (built) sections.push(built);
   }
 
   return {
@@ -396,5 +384,50 @@ export async function getPlanExportData(
     academicYear: shell.academicYear,
     generatedAt: new Date(),
     sections,
+  };
+}
+
+export type SectionExportData = {
+  schoolName: string;
+  schoolUnit: string;
+  schoolSystem: string;
+  schoolGender: string;
+  planTypeName: string;
+  academicYear: string;
+  generatedAt: Date;
+  section: PlanExportSection;
+};
+
+/**
+ * يجمّع بيانات قسم واحد بمعزل عن باقي أقسام الخطة — لتنزيله كملف PDF
+ * مستقل (مثلًا الجدول الأسبوعي وحده دون بقية خطة النشاط الطلابي). يعيد
+ * null إن لم توجد الخطة، لم تكن ملكًا لهذه المدرسة، لم يوجد القسم في
+ * قالبها، أو كان نوعه غير مدعوم في التصدير.
+ */
+export async function getSectionExportData(
+  schoolId: string,
+  planId: string,
+  sectionKey: string
+): Promise<SectionExportData | null> {
+  const shell = await loadPlanShell(schoolId, planId);
+  if (!shell) return null;
+
+  const section = shell.sections.find((s) => s.key === sectionKey);
+  if (!section) return null;
+
+  const built = await buildExportSection(shell.templateId, planId, section);
+  if (!built) return null;
+
+  const school = await prisma.school.findUniqueOrThrow({ where: { id: schoolId } });
+
+  return {
+    schoolName: school.name,
+    schoolUnit: school.unit,
+    schoolSystem: school.schoolSystem,
+    schoolGender: school.gender,
+    planTypeName: shell.planType.nameAr,
+    academicYear: shell.academicYear,
+    generatedAt: new Date(),
+    section: built,
   };
 }

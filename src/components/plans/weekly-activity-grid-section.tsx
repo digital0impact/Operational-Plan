@@ -59,10 +59,18 @@ export function WeeklyActivityGridSection({
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <p className="text-sm text-muted">
-        أضف صفًا لكل صف دراسي أو فئة تريد جدولتها، ثم دوّن نشاط كل أسبوع في
-        خليته — يمكن أن تجمع الخلية الواحدة المجال والبرنامج واسم القائدة معًا.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-sm text-muted">
+          أضف صفًا لكل صف دراسي أو فئة تريد جدولتها، ثم دوّن نشاط كل أسبوع في
+          خليته — يمكن أن تجمع الخلية الواحدة المجال والبرنامج واسم القائدة معًا.
+        </p>
+        <a
+          href={`/plans/${planId}/${sectionKey}/export`}
+          className="shrink-0 rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
+        >
+          تنزيل هذا الجدول PDF (منفصلًا عن باقي الخطة)
+        </a>
+      </div>
 
       <input type="hidden" name="rowCount" value={rows.length} />
 
