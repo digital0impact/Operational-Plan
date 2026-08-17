@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { generateStructured, type AiResult } from "@/lib/ai/generate";
+import { sectionConfigString } from "@/lib/plan-data";
 import {
   SCHOOL_GENDER_OPTIONS,
   SCHOOL_CLASSIFICATION_OPTIONS,
@@ -254,4 +255,64 @@ ${typeLabel}: "${initiative.name}"
 الجهة المسؤولة، والشواهد.`;
 
   return generateStructured(SYSTEM_PROMPT, prompt, actionItemSchema);
+}
+
+// ── 6) عناصر قسم OBJECTIVES_LIST عام (أي نوع خطة على المعمار العام) ────
+// نطاقها أوسع من الخطة التشغيلية (لا "الإجراء س-1-أ-1" تحديدًا)، فلها
+// موجّه نظام أعم بدل SYSTEM_PROMPT أعلاه — عارض OBJECTIVES_LIST واحد يخدم
+// كل الأنواع، فدالة اقتراح واحدة تكفي بدل دالة لكل نوع.
+
+const GENERIC_PLAN_SYSTEM_PROMPT =
+  "أنت مساعد متخصص في إعداد خطط مدارس التعليم العام في المملكة العربية " +
+  "السعودية، وفق «دليل إجراءات عمل مدارس التعليم العام» (الإصدار الرابع، " +
+  "رجب 1446هـ/يناير 2025م). تكتب دائمًا بالعربية الفصحى، بأسلوب مهني موجز " +
+  "يصلح للإدراج المباشر داخل وثيقة رسمية، دون مقدمات أو شروح أو تعليقات إضافية.";
+
+const genericObjectivesSchema = z.object({
+  items: z
+    .array(z.string().min(3))
+    .min(3)
+    .max(5)
+    .describe("عناصر قصيرة ومحددة، عنصر واحد لكل سطر"),
+});
+
+export async function suggestObjectivesListItems(
+  schoolId: string,
+  planId: string,
+  sectionKey: string
+): Promise<AiResult<{ items: string[] }>> {
+  const plan = await prisma.plan.findFirst({
+    where: { id: planId, schoolId },
+    include: { template: { include: { planType: true, sections: true } } },
+  });
+  if (!plan) {
+    return { ok: false, error: "الخطة غير موجودة." };
+  }
+  const section = plan.template.sections.find((s) => s.key === sectionKey);
+  if (!section) {
+    return { ok: false, error: "القسم غير موجود." };
+  }
+
+  const [school, existing] = await Promise.all([
+    prisma.school.findUniqueOrThrow({ where: { id: schoolId } }),
+    prisma.planObjective.findMany({
+      where: { planId, sectionKey },
+      orderBy: { order: "asc" },
+    }),
+  ]);
+
+  const itemLabel = sectionConfigString(section.configJson, "itemLabel") ?? "عنصر";
+
+  const prompt = `${schoolContextLine(school)}
+
+نوع الخطة: "${plan.template.planType.nameAr}"
+القسم الحالي: "${section.titleAr}" — كل عنصر فيه من نوع "${itemLabel}"
+
+اقترح 3 إلى 5 عناصر من نوع "${itemLabel}" مناسبة لهذه الخطة ولهذه المدرسة،
+بصياغة موجزة ومحددة تصلح للإدراج المباشر داخل وثيقة رسمية.${existingItemsBlock(
+    "عناصر هذا القسم المُدخَلة مسبقًا",
+    existing.map((i) => i.text)
+  )}`;
+
+  return generateStructured(GENERIC_PLAN_SYSTEM_PROMPT, prompt, genericObjectivesSchema);
 }

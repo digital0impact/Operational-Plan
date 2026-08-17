@@ -6,6 +6,7 @@ import {
   suggestActionItem,
   suggestKeyIssues,
   suggestKpi,
+  suggestObjectivesListItems,
   suggestOperationalGoal,
   suggestSwotItems,
   type ActionItemSuggestion,
@@ -48,4 +49,15 @@ export async function suggestActionItemAction(
 ): Promise<AiResult<ActionItemSuggestion>> {
   const schoolId = await requireSchoolId();
   return suggestActionItem(schoolId, initiativeId);
+}
+
+/** لأي قسم OBJECTIVES_LIST على المعمار العام (أهداف، اهتمامات، جوانب
+ * تحسين…) — عارض واحد يخدم كل أنواع الخطط، فاقتراح واحد يكفي بدل واحد
+ * لكل نوع. */
+export async function suggestObjectivesListItemsAction(
+  planId: string,
+  sectionKey: string
+): Promise<AiResult<{ items: string[] }>> {
+  const schoolId = await requireSchoolId();
+  return suggestObjectivesListItems(schoolId, planId, sectionKey);
 }

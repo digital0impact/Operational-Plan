@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { saveObjectivesListSectionAction } from "@/app/actions/plans";
+import { suggestObjectivesListItemsAction } from "@/app/actions/ai";
 import type { ActionState } from "@/app/actions/auth";
 import { ErrorNotice } from "@/components/form-controls";
 import { SubmitButton } from "@/components/submit-button";
@@ -34,6 +35,10 @@ export function ObjectivesListSection({
         initialItems={initialItems}
         placeholder={placeholder ?? `اكتب ${itemLabel}…`}
         addLabel={`إضافة ${itemLabel}`}
+        aiSuggest={{
+          label: "اقترح بالذكاء الاصطناعي",
+          onGenerate: () => suggestObjectivesListItemsAction(planId, sectionKey),
+        }}
       />
 
       <ErrorNotice message={state.error} />
