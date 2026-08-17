@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect, notFound } from "next/navigation";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireSchoolId } from "@/lib/auth-guards";
@@ -235,7 +236,18 @@ export async function savePlanProgramsSectionAction(
   redirectToNextSection(ctx);
 }
 
-/** DETAIL_TABLE — تفاصيل تنفيذ + شاهد نصي لكل برنامج من قسم البرامج المصدر. */
+/**
+ * DETAIL_TABLE — تفاصيل تنفيذ + شاهد نصي لكل برنامج من قسم البرامج المصدر.
+ *
+ * استبدال كامل بدل upsert برنامج-بمعرّف: النموذج يرسل حقول كل برنامج
+ * كاملة في كل حفظة (نفس منطق إصلاح saveWeeklyGridSectionAction)، فيُستبدَل
+ * حذف/إنشاء متسلسل قد يبلغ 3 استعلامات لكل برنامج (upsert نشاط + بحث شاهد
+ * + إنشاء/تحديث شاهد — قد يتجاوز مهلة المعاملة التفاعلية لخطة بعشرات
+ * البرامج على قاعدة بيانات بعيدة الكمون) بحذف جماعي وإنشاء جماعي: استعلامان
+ * إلى أربعة بصرف النظر عن عدد البرامج. المُعرِّفات الجديدة (randomUUID لا
+ * cuid الافتراضي) مقبولة لأن الحقل `id String` عادي، والافتراضي يُطبَّق
+ * فقط عند حذف القيمة من الإنشاء.
+ */
 export async function savePlanDetailSectionAction(
   planId: string,
   sectionKey: string,
@@ -263,40 +275,49 @@ export async function savePlanDetailSectionAction(
     select: { id: true },
   });
 
-  await prisma.$transaction(async (tx) => {
-    for (const p of programs) {
-      const fields = {
-        activity: ((formData.get(`activity_${p.id}`) as string) ?? "").trim(),
-        targetCategory: ((formData.get(`category_${p.id}`) as string) ?? "").trim(),
-        executionRequirements: ((formData.get(`requirements_${p.id}`) as string) ?? "").trim(),
-        executionDate: ((formData.get(`date_${p.id}`) as string) ?? "").trim(),
-        responsible: ((formData.get(`responsible_${p.id}`) as string) ?? "").trim(),
-        supervisor: ((formData.get(`supervisor_${p.id}`) as string) ?? "").trim(),
-        estimatedBudget: ((formData.get(`budget_${p.id}`) as string) ?? "").trim(),
-        regulatorySecurityRequirements: (
-          (formData.get(`regulatory_${p.id}`) as string) ?? ""
-        ).trim(),
-        planningNote: ((formData.get(`planningNote_${p.id}`) as string) ?? "").trim(),
-      };
-      const activity = await tx.planActivity.upsert({
-        where: { programId_order: { programId: p.id, order: 0 } },
-        update: fields,
-        create: { programId: p.id, order: 0, ...fields },
-      });
+  const activities = programs.map((p) => ({
+    id: randomUUID(),
+    programId: p.id,
+    activity: ((formData.get(`activity_${p.id}`) as string) ?? "").trim(),
+    targetCategory: ((formData.get(`category_${p.id}`) as string) ?? "").trim(),
+    executionRequirements: ((formData.get(`requirements_${p.id}`) as string) ?? "").trim(),
+    executionDate: ((formData.get(`date_${p.id}`) as string) ?? "").trim(),
+    responsible: ((formData.get(`responsible_${p.id}`) as string) ?? "").trim(),
+    supervisor: ((formData.get(`supervisor_${p.id}`) as string) ?? "").trim(),
+    estimatedBudget: ((formData.get(`budget_${p.id}`) as string) ?? "").trim(),
+    regulatorySecurityRequirements: ((formData.get(`regulatory_${p.id}`) as string) ?? "").trim(),
+    planningNote: ((formData.get(`planningNote_${p.id}`) as string) ?? "").trim(),
+    evidenceText: ((formData.get(`evidence_${p.id}`) as string) ?? "").trim(),
+  }));
 
-      const evidenceText = ((formData.get(`evidence_${p.id}`) as string) ?? "").trim();
-      const existingEvidence = await tx.planEvidence.findFirst({
-        where: { activityId: activity.id },
-        orderBy: { order: "asc" },
+  await prisma.$transaction(async (tx) => {
+    await tx.planActivity.deleteMany({ where: { programId: { in: programs.map((p) => p.id) } } });
+    if (activities.length > 0) {
+      await tx.planActivity.createMany({
+        data: activities.map((a) => ({
+          id: a.id,
+          programId: a.programId,
+          order: 0,
+          activity: a.activity,
+          targetCategory: a.targetCategory,
+          executionRequirements: a.executionRequirements,
+          executionDate: a.executionDate,
+          responsible: a.responsible,
+          supervisor: a.supervisor,
+          estimatedBudget: a.estimatedBudget,
+          regulatorySecurityRequirements: a.regulatorySecurityRequirements,
+          planningNote: a.planningNote,
+        })),
       });
-      if (existingEvidence) {
-        await tx.planEvidence.update({
-          where: { id: existingEvidence.id },
-          data: { textValue: evidenceText },
-        });
-      } else if (evidenceText) {
-        await tx.planEvidence.create({
-          data: { activityId: activity.id, kind: "TEXT", textValue: evidenceText, order: 0 },
+      const evidenceRows = activities.filter((a) => a.evidenceText);
+      if (evidenceRows.length > 0) {
+        await tx.planEvidence.createMany({
+          data: evidenceRows.map((a) => ({
+            activityId: a.id,
+            kind: "TEXT",
+            textValue: a.evidenceText,
+            order: 0,
+          })),
         });
       }
     }
@@ -308,10 +329,17 @@ export async function savePlanDetailSectionAction(
 
 /**
  * WEEKLY_ACTIVITY_GRID — جدول أسبوعي (صف × أسبوع). عدد الأسابيع ثابت
- * (weeksCount من configJson)، وعدد الصفوف حرّ يحدده مدير المدرسة. هوية كل
- * صف "موضعية" بترتيب إرساله في النموذج (rowLabel_0..rowLabel_{n-1}) لا
- * بمعرّف ثابت — upsert بالترتيب بدل حذف/إعادة إنشاء الكل، حتى لا تُفقَد
- * خلايا صف لم يتغيّر ترتيبه لمجرّد تعديل صف آخر.
+ * (weeksCount من configJson)، وعدد الصفوف حرّ يحدده مدير المدرسة.
+ *
+ * استبدال كامل بدل upsert صف-بصف: النموذج يرسل الحالة الكاملة (كل تسميات
+ * الأسابيع وكل الصفوف وخلاياها) في كل حفظة، فلا خسارة بيانات من الحذف
+ * والإعادة — ومعرّف الصف لا يتسرّب خارج هذا القسم أصلًا (PlanGridCell
+ * الوحيد المرتبط به يُعاد إنشاؤه معه). هذا يقلّص العملية من upsert واحد لكل
+ * (أسبوع) + upsert واحد لكل (صف) + upsert واحد لكل (صف × أسبوع) — قد
+ * يتجاوز المئة استعلام متسلسل لجدول 18 أسبوعًا بضعة صفوف، فيتجاوز مهلة
+ * المعاملة التفاعلية الافتراضية (5 ثوانٍ) على قواعد بيانات بعيدة الكمون
+ * كـ Supabase — إلى عدد ثابت من استعلامات الحذف/الإنشاء الجماعي (٥ كحد
+ * أقصى) بصرف النظر عن عدد الأسابيع أو الصفوف.
  */
 export async function saveWeeklyGridSectionAction(
   planId: string,
@@ -325,39 +353,45 @@ export async function saveWeeklyGridSectionAction(
   const weeksCount = sectionConfigNumber(ctx.section.configJson, "weeksCount") ?? 18;
   const rowCount = Math.max(0, Math.min(200, Number(formData.get("rowCount")) || 0));
 
+  const weekLabels = Array.from({ length: weeksCount }, (_, i) => {
+    const order = i + 1;
+    return { order, label: ((formData.get(`weekLabel_${order}`) as string) ?? "").trim() };
+  }).filter((w) => w.label);
+
+  const rows = Array.from({ length: rowCount }, (_, i) => {
+    const cells = Array.from({ length: weeksCount }, (_, wi) => {
+      const weekOrder = wi + 1;
+      const content = ((formData.get(`cell_${i}_${weekOrder}`) as string) ?? "").trim();
+      return { weekOrder, content };
+    }).filter((c) => c.content);
+    return {
+      id: randomUUID(),
+      order: i,
+      label: ((formData.get(`rowLabel_${i}`) as string) ?? "").trim(),
+      cells,
+    };
+  });
+
   await prisma.$transaction(async (tx) => {
-    for (let week = 1; week <= weeksCount; week++) {
-      const label = ((formData.get(`weekLabel_${week}`) as string) ?? "").trim();
-      await tx.planGridWeek.upsert({
-        where: { planId_sectionKey_order: { planId, sectionKey, order: week } },
-        update: { label },
-        create: { planId, sectionKey, order: week, label },
+    await tx.planGridWeek.deleteMany({ where: { planId, sectionKey } });
+    if (weekLabels.length > 0) {
+      await tx.planGridWeek.createMany({
+        data: weekLabels.map((w) => ({ planId, sectionKey, order: w.order, label: w.label })),
       });
     }
 
-    for (let i = 0; i < rowCount; i++) {
-      const label = ((formData.get(`rowLabel_${i}`) as string) ?? "").trim();
-      const row = await tx.planGridRow.upsert({
-        where: { planId_sectionKey_order: { planId, sectionKey, order: i } },
-        update: { label },
-        create: { planId, sectionKey, order: i, label },
+    await tx.planGridRow.deleteMany({ where: { planId, sectionKey } });
+    if (rows.length > 0) {
+      await tx.planGridRow.createMany({
+        data: rows.map((r) => ({ id: r.id, planId, sectionKey, order: r.order, label: r.label })),
       });
-
-      for (let week = 1; week <= weeksCount; week++) {
-        const content = ((formData.get(`cell_${i}_${week}`) as string) ?? "").trim();
-        await tx.planGridCell.upsert({
-          where: { rowId_weekOrder: { rowId: row.id, weekOrder: week } },
-          update: { content },
-          create: { rowId: row.id, weekOrder: week, content },
-        });
+      const cells = rows.flatMap((r) =>
+        r.cells.map((c) => ({ rowId: r.id, weekOrder: c.weekOrder, content: c.content }))
+      );
+      if (cells.length > 0) {
+        await tx.planGridCell.createMany({ data: cells });
       }
     }
-
-    // صفوف زائدة تجاوزت العدد المُرسَل (حُذفت من الواجهة) — يحذف خلاياها
-    // تلقائيًا بالـ cascade
-    await tx.planGridRow.deleteMany({
-      where: { planId, sectionKey, order: { gte: rowCount } },
-    });
   });
 
   await markSectionComplete(planId, sectionKey, ctx.sections.length);
@@ -367,6 +401,9 @@ export async function saveWeeklyGridSectionAction(
 /**
  * PROGRAM_WEEK_TAGS — يربط كل برنامج بأسبوع أو أكثر من أسابيع "الخطة
  * الفصلية" (استبدال كامل لأسابيع كل برنامج في كل حفظة، لا إضافة تراكمية).
+ * حذف جماعي بمرشِّح `programId IN (...)` ثم إنشاء جماعي واحد بدل حلقة
+ * حذف/إنشاء لكل برنامج — استعلامان ثابتان بصرف النظر عن عدد البرامج،
+ * بنفس منطق إصلاح saveWeeklyGridSectionAction لمهلة المعاملة التفاعلية.
  */
 export async function saveProgramWeekTagsSectionAction(
   planId: string,
@@ -395,21 +432,20 @@ export async function saveProgramWeekTagsSectionAction(
     select: { id: true },
   });
 
-  await prisma.$transaction(async (tx) => {
-    for (const p of programs) {
-      const weeks = formData
-        .getAll(`weeks_${p.id}`)
-        .map((v) => Number(v))
-        .filter((n) => Number.isInteger(n) && n > 0);
-
-      await tx.planProgramWeekTag.deleteMany({ where: { programId: p.id } });
-      if (weeks.length > 0) {
-        await tx.planProgramWeekTag.createMany({
-          data: weeks.map((weekOrder) => ({ programId: p.id, weekOrder })),
-        });
-      }
-    }
+  const tags = programs.flatMap((p) => {
+    const weeks = formData
+      .getAll(`weeks_${p.id}`)
+      .map((v) => Number(v))
+      .filter((n) => Number.isInteger(n) && n > 0);
+    return weeks.map((weekOrder) => ({ programId: p.id, weekOrder }));
   });
+
+  await prisma.$transaction([
+    prisma.planProgramWeekTag.deleteMany({
+      where: { programId: { in: programs.map((p) => p.id) } },
+    }),
+    ...(tags.length > 0 ? [prisma.planProgramWeekTag.createMany({ data: tags })] : []),
+  ]);
 
   await markSectionComplete(planId, sectionKey, ctx.sections.length);
   redirectToNextSection(ctx);
