@@ -76,6 +76,7 @@ export async function getSchoolPlans(schoolId: string) {
       progressPercent:
         totalSections === 0 ? 0 : Math.round((completedSections / totalSections) * 100),
       nextSectionKey: firstIncomplete,
+      firstSectionKey: plan.template.sections[0]?.key,
     };
   });
 }
@@ -192,4 +193,136 @@ export async function getDetailPlanData(
       };
     }),
   }));
+}
+
+export type PlanExportSection =
+  | { kind: "STATIC_INFO"; key: string; titleAr: string; description: string }
+  | { kind: "OBJECTIVES_LIST"; key: string; titleAr: string; items: string[] }
+  | {
+      kind: "INDICATORS_LIST";
+      key: string;
+      titleAr: string;
+      rows: Awaited<ReturnType<typeof getIndicatorsData>>;
+    }
+  | {
+      kind: "PROGRAMS_LIST";
+      key: string;
+      titleAr: string;
+      objectives: { order: number; text: string; programs: string[] }[];
+    }
+  | {
+      kind: "DETAIL_TABLE";
+      key: string;
+      titleAr: string;
+      objectives: Awaited<ReturnType<typeof getDetailPlanData>>;
+    };
+
+export type PlanExportData = {
+  schoolName: string;
+  schoolUnit: string;
+  schoolSystem: string;
+  schoolGender: string;
+  planTypeName: string;
+  academicYear: string;
+  generatedAt: Date;
+  sections: PlanExportSection[];
+};
+
+/**
+ * يجمّع بيانات خطة كاملة (على المعمار العام) بترتيب أقسام قالبها، جاهزة
+ * لبناء PDF عام يغطي أنواع الأقسام الخمسة المُنفَّذة — يعيد null إن لم توجد
+ * الخطة أو لم تكن ملكًا لهذه المدرسة (نفس تحقّق الملكية في loadPlanShell).
+ */
+export async function getPlanExportData(
+  schoolId: string,
+  planId: string
+): Promise<PlanExportData | null> {
+  const shell = await loadPlanShell(schoolId, planId);
+  if (!shell) return null;
+
+  const school = await prisma.school.findUniqueOrThrow({ where: { id: schoolId } });
+
+  const sections: PlanExportSection[] = [];
+  for (const section of shell.sections) {
+    switch (section.kind) {
+      case "STATIC_INFO": {
+        sections.push({
+          kind: "STATIC_INFO",
+          key: section.key,
+          titleAr: section.titleAr,
+          description: sectionConfigString(section.configJson, "description") ?? "",
+        });
+        break;
+      }
+      case "OBJECTIVES_LIST": {
+        const items = await getObjectivesForSection(planId, section.key);
+        sections.push({
+          kind: "OBJECTIVES_LIST",
+          key: section.key,
+          titleAr: section.titleAr,
+          items: items.map((i) => i.text),
+        });
+        break;
+      }
+      case "INDICATORS_LIST": {
+        const objectivesSectionKey = sectionConfigString(
+          section.configJson,
+          "objectivesSectionKey"
+        );
+        const rows = objectivesSectionKey
+          ? await getIndicatorsData(planId, objectivesSectionKey)
+          : [];
+        sections.push({ kind: "INDICATORS_LIST", key: section.key, titleAr: section.titleAr, rows });
+        break;
+      }
+      case "PROGRAMS_LIST": {
+        const objectivesSectionKey = sectionConfigString(
+          section.configJson,
+          "objectivesSectionKey"
+        );
+        const data = objectivesSectionKey
+          ? await getProgramsData(planId, objectivesSectionKey)
+          : [];
+        sections.push({
+          kind: "PROGRAMS_LIST",
+          key: section.key,
+          titleAr: section.titleAr,
+          objectives: data.map((o) => ({
+            order: o.order,
+            text: o.text,
+            programs: o.programs.map((p) => p.name),
+          })),
+        });
+        break;
+      }
+      case "DETAIL_TABLE": {
+        const programsSectionKey = sectionConfigString(section.configJson, "programsSectionKey");
+        const objectives = programsSectionKey
+          ? await getDetailPlanData(shell.templateId, planId, programsSectionKey)
+          : [];
+        sections.push({
+          kind: "DETAIL_TABLE",
+          key: section.key,
+          titleAr: section.titleAr,
+          objectives,
+        });
+        break;
+      }
+      default:
+        // أنواع أقسام خاصة بالخطة التشغيلية القديمة (SWOT_GRID وغيرها) لا
+        // تُستخدَم في قوالب الخطط على المعمار العام — تُتجاهَل هنا بأمان.
+        break;
+    }
+  }
+
+  return {
+    schoolName: school.name,
+    schoolUnit: school.unit,
+    schoolSystem: school.schoolSystem,
+    schoolGender: school.gender,
+    planTypeName: shell.planType.nameAr,
+    academicYear: shell.academicYear,
+    generatedAt: new Date(),
+    sections,
+  };
 }

@@ -7,6 +7,8 @@ import {
   getSwotItems,
 } from "@/lib/wizard-data";
 import { buildPlanHtml, type PlanData } from "@/lib/pdf/template";
+import { buildGenericPlanHtml } from "@/lib/pdf/generic-template";
+import { getPlanExportData } from "@/lib/plan-data";
 
 /**
  * خيارات تشغيل Chromium حسب البيئة:
@@ -94,10 +96,9 @@ async function loadPlanData(schoolId: string): Promise<PlanData> {
   };
 }
 
-export async function renderSchoolPlanPdf(schoolId: string): Promise<Buffer> {
-  const data = await loadPlanData(schoolId);
-  const html = buildPlanHtml(data);
-
+/** يُحوّل صفحة HTML جاهزة إلى PDF عبر Chromium — منطق مشترك بين تصدير
+ * الخطة التشغيلية وتصدير الخطط على المعمار العام. */
+async function renderHtmlToPdf(html: string): Promise<Buffer> {
   const browser = await chromium.launch(await resolveLaunchOptions());
 
   try {
@@ -113,4 +114,23 @@ export async function renderSchoolPlanPdf(schoolId: string): Promise<Buffer> {
   } finally {
     await browser.close();
   }
+}
+
+export async function renderSchoolPlanPdf(schoolId: string): Promise<Buffer> {
+  const data = await loadPlanData(schoolId);
+  const html = buildPlanHtml(data);
+  return renderHtmlToPdf(html);
+}
+
+/** تصدير PDF لخطة على المعمار العام (النشاط الطلابي، رعاية الموهوبين،
+ * التوجيه الطالبي، التقويم الذاتي، التحسين والتطوير…) — يُعيد null إن لم
+ * توجد الخطة أو لم تكن ملكًا لهذه المدرسة (تحقّق الملكية في getPlanExportData). */
+export async function renderGenericPlanPdf(
+  schoolId: string,
+  planId: string
+): Promise<Buffer | null> {
+  const data = await getPlanExportData(schoolId, planId);
+  if (!data) return null;
+  const html = buildGenericPlanHtml(data);
+  return renderHtmlToPdf(html);
 }

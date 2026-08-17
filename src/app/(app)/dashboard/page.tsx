@@ -113,6 +113,12 @@ export default async function DashboardPage() {
                   {completedCount === 0 ? "ابدأ" : "متابعة"}
                 </Link>
               )}
+              <Link
+                href="/wizard/1"
+                className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
+              >
+                تحرير
+              </Link>
               {completedCount > 0 ? (
                 <a
                   href="/export"
@@ -147,7 +153,7 @@ export default async function DashboardPage() {
                   style={{ width: `${plan.progressPercent}%` }}
                 />
               </div>
-              <div className="relative z-10">
+              <div className="relative z-10 flex flex-wrap items-center gap-2">
                 {plan.status === "COMPLETE" ? (
                   <span className="rounded-lg bg-accent-soft px-3.5 py-2 text-xs font-semibold text-accent">
                     مكتملة ✓
@@ -160,6 +166,22 @@ export default async function DashboardPage() {
                     متابعة
                   </Link>
                 )}
+                {plan.firstSectionKey ? (
+                  <Link
+                    href={`/plans/${plan.id}/${plan.firstSectionKey}`}
+                    className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
+                  >
+                    تحرير
+                  </Link>
+                ) : null}
+                {plan.completedSections > 0 ? (
+                  <a
+                    href={`/plans/${plan.id}/export`}
+                    className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
+                  >
+                    تصدير PDF
+                  </a>
+                ) : null}
               </div>
             </li>
           ))}
