@@ -343,7 +343,7 @@ model PlanTemplateSection {
   order      Int     @default(0)
   titleAr    String
   titleEn    String?
-  kind       String // STATIC_INFO | ACKNOWLEDGEMENT_LIST | REFERENCE_LIST | OBJECTIVES_LIST | INDICATORS_LIST | SWOT_GRID | REPEATABLE_TEXT_LIST | PROGRAMS_LIST | DETAIL_TABLE
+  kind       String // STATIC_INFO | ACKNOWLEDGEMENT_LIST | REFERENCE_LIST | OBJECTIVES_LIST | INDICATORS_LIST | SWOT_GRID | REPEATABLE_TEXT_LIST | PROGRAMS_LIST | DETAIL_TABLE | WEEKLY_ACTIVITY_GRID
   configJson Json?
 
   templateId String
@@ -382,6 +382,8 @@ model Plan {
 
   sectionProgress PlanSectionProgress[]
   objectives      PlanObjective[]
+  gridRows        PlanGridRow[]
+  gridWeeks       PlanGridWeek[]
 
   @@unique([schoolId, templateId, academicYear])
   @@map("plans")
@@ -499,4 +501,57 @@ model PlanEvidence {
   objective   PlanObjective? @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
 
   @@map("plan_evidence")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// قسم WEEKLY_ACTIVITY_GRID — جدول أسبوعي (صف/فئة × أسبوع)، مثل جدول خطة
+// النشاط الطلابي الفعلي الذي تنتجه المدارس (نموذج ورقي/Excel واقعي رصدناه
+// من مدرسة فعلية). خلافًا لبقية أقسام المعمار العام، عدد "الصفوف" هنا حرّ
+// يحدده مدير المدرسة (فئات مختلفة حسب طبيعة كل مدرسة)، بينما عدد "الأسابيع"
+// ثابت يحدده configJson لقسم القالب (افتراضيًا 18، فصل دراسي كامل تقريبًا).
+// ─────────────────────────────────────────────────────────────────────────
+
+/// صف مخصص (صف دراسي أو فئة أخرى يحددها مدير المدرسة) ضمن جدول أسبوعي
+model PlanGridRow {
+  id    String @id @default(cuid())
+  label String @default("")
+  order Int    @default(0)
+
+  planId     String
+  plan       Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sectionKey String
+
+  cells PlanGridCell[]
+
+  @@unique([planId, sectionKey, order])
+  @@map("plan_grid_rows")
+}
+
+/// عمود أسبوع ضمن جدول أسبوعي — عدده ثابت (configJson.weeksCount)، وتسميته
+/// (نطاق التاريخ الهجري/الميلادي) حرة يكتبها مدير المدرسة
+model PlanGridWeek {
+  id    String @id @default(cuid())
+  label String @default("")
+  order Int // 1..weeksCount
+
+  planId     String
+  plan       Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sectionKey String
+
+  @@unique([planId, sectionKey, order])
+  @@map("plan_grid_weeks")
+}
+
+/// محتوى خلية تقاطع صف × أسبوع — نص حر واحد (قد يجمع المجال والبرنامج
+/// واسم المسؤولة في نفس الخلية بأسطر متعددة، كما يكتبه مدير المدرسة فعليًا)
+model PlanGridCell {
+  id      String @id @default(cuid())
+  content String @default("")
+
+  rowId     String
+  row       PlanGridRow @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  weekOrder Int
+
+  @@unique([rowId, weekOrder])
+  @@map("plan_grid_cells")
 }

@@ -6,7 +6,9 @@ import {
   getIndicatorsData,
   getObjectivesForSection,
   getProgramsData,
+  getWeeklyGridData,
   loadPlanShell,
+  sectionConfigNumber,
   sectionConfigString,
 } from "@/lib/plan-data";
 import { PlanShell } from "@/components/plan-shell";
@@ -15,6 +17,7 @@ import { ObjectivesListSection } from "@/components/plans/objectives-list-sectio
 import { IndicatorsListSection } from "@/components/plans/indicators-list-section";
 import { ProgramsListSection } from "@/components/plans/programs-list-section";
 import { DetailTableSection } from "@/components/plans/detail-table-section";
+import { WeeklyActivityGridSection } from "@/components/plans/weekly-activity-grid-section";
 
 export async function generateMetadata({
   params,
@@ -112,6 +115,20 @@ export default async function PlanSectionPage({
         ? await getDetailPlanData(shell.templateId, planId, programsSectionKey)
         : [];
       body = <DetailTableSection planId={planId} sectionKey={sectionKey} rows={rows} />;
+      break;
+    }
+
+    case "WEEKLY_ACTIVITY_GRID": {
+      const weeksCount = sectionConfigNumber(section.configJson, "weeksCount") ?? 18;
+      const grid = await getWeeklyGridData(planId, sectionKey, weeksCount);
+      body = (
+        <WeeklyActivityGridSection
+          planId={planId}
+          sectionKey={sectionKey}
+          weeks={grid.weeks}
+          initialRows={grid.rows}
+        />
+      );
       break;
     }
 

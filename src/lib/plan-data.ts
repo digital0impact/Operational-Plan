@@ -13,6 +13,18 @@ export function sectionConfigString(
   return undefined;
 }
 
+/** يقرأ قيمة رقمية من configJson لقسم قالب — يُعيد undefined إن غابت أو لم تكن رقمًا. */
+export function sectionConfigNumber(
+  configJson: unknown,
+  key: string
+): number | undefined {
+  if (configJson && typeof configJson === "object" && key in configJson) {
+    const value = (configJson as Record<string, unknown>)[key];
+    return typeof value === "number" ? value : undefined;
+  }
+  return undefined;
+}
+
 /**
  * يحمّل خطة عامة (Plan) مع نوعها وقالبها وأقسامه المرتَّبة، ويتحقّق أنها
  * تابعة للمدرسة المطلوبة. يُعيد null إن لم توجد الخطة أو لم تكن ملكًا لهذه
@@ -195,6 +207,49 @@ export async function getDetailPlanData(
   }));
 }
 
+/**
+ * جدول أسبوعي (WEEKLY_ACTIVITY_GRID): عدد الأسابيع ثابت (weeksCount) وعدد
+ * الصفوف حرّ يحدده مدير المدرسة. تُبنى أعمدة الأسابيع دائمًا كاملة العدد
+ * (1..weeksCount) حتى لو لم تُحفَظ تسمياتها بعد، ليعرضها النموذج فارغة
+ * بدل أن تختفي.
+ */
+export async function getWeeklyGridData(
+  planId: string,
+  sectionKey: string,
+  weeksCount: number
+) {
+  const [rows, weeks] = await Promise.all([
+    prisma.planGridRow.findMany({
+      where: { planId, sectionKey },
+      orderBy: { order: "asc" },
+      include: { cells: true },
+    }),
+    prisma.planGridWeek.findMany({
+      where: { planId, sectionKey },
+      orderBy: { order: "asc" },
+    }),
+  ]);
+
+  const weekLabels = new Map(weeks.map((w) => [w.order, w.label]));
+  const weekColumns = Array.from({ length: weeksCount }, (_, i) => ({
+    order: i + 1,
+    label: weekLabels.get(i + 1) ?? "",
+  }));
+
+  return {
+    weeks: weekColumns,
+    rows: rows.map((r) => {
+      const cellsByWeek = new Map(r.cells.map((c) => [c.weekOrder, c.content]));
+      return {
+        id: r.id,
+        order: r.order,
+        label: r.label,
+        cells: Array.from({ length: weeksCount }, (_, i) => cellsByWeek.get(i + 1) ?? ""),
+      };
+    }),
+  };
+}
+
 export type PlanExportSection =
   | { kind: "STATIC_INFO"; key: string; titleAr: string; description: string }
   | { kind: "OBJECTIVES_LIST"; key: string; titleAr: string; items: string[] }
@@ -215,6 +270,12 @@ export type PlanExportSection =
       key: string;
       titleAr: string;
       objectives: Awaited<ReturnType<typeof getDetailPlanData>>;
+    }
+  | {
+      kind: "WEEKLY_ACTIVITY_GRID";
+      key: string;
+      titleAr: string;
+      grid: Awaited<ReturnType<typeof getWeeklyGridData>>;
     };
 
 export type PlanExportData = {
@@ -305,6 +366,17 @@ export async function getPlanExportData(
           key: section.key,
           titleAr: section.titleAr,
           objectives,
+        });
+        break;
+      }
+      case "WEEKLY_ACTIVITY_GRID": {
+        const weeksCount = sectionConfigNumber(section.configJson, "weeksCount") ?? 18;
+        const grid = await getWeeklyGridData(planId, section.key, weeksCount);
+        sections.push({
+          kind: "WEEKLY_ACTIVITY_GRID",
+          key: section.key,
+          titleAr: section.titleAr,
+          grid,
         });
         break;
       }

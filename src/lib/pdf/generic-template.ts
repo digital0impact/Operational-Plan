@@ -27,6 +27,19 @@ function cell(value: string | null | undefined): string {
   return safe ? safe : `<span class="empty">—</span>`;
 }
 
+function cellMultiline(value: string | null | undefined): string {
+  const safe = esc(value);
+  return safe ? safe.replace(/\n/g, "<br/>") : `<span class="empty">—</span>`;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size));
+  }
+  return result;
+}
+
 function numberedList(items: string[], emptyLabel: string): string {
   if (items.length === 0) {
     return `<p class="empty">${emptyLabel}</p>`;
@@ -153,6 +166,57 @@ function renderSection(section: PlanExportSection): string {
         }
       </section>`;
 
+    case "WEEKLY_ACTIVITY_GRID": {
+      const { weeks, rows } = section.grid;
+      if (rows.length === 0) {
+        return `
+        <section class="doc-page">
+          <h2 class="section-title">${esc(section.titleAr)}</h2>
+          <p class="empty">لا توجد صفوف بعد</p>
+        </section>`;
+      }
+      // 18 عمود أسبوع لا تتّسع صفحة A4 واحدة عرضًا — نقسّمها إلى مجموعات
+      // صغيرة، كل مجموعة جدول HTML مستقل تحت نفس عنوان القسم، مطابقةً لتقسيم
+      // النموذج الورقي الفعلي الذي بُني عليه هذا القسم (خمسة أسابيع تقريبًا
+      // لكل صفحة).
+      const weekChunks = chunk(weeks, 5);
+      return `
+      <section class="doc-page">
+        <h2 class="section-title">${esc(section.titleAr)}</h2>
+        ${weekChunks
+          .map(
+            (weekChunk) => `
+        <table class="grid-table">
+          <thead>
+            <tr>
+              <th class="grid-row-header">الصف / الفئة</th>
+              ${weekChunk
+                .map(
+                  (w) =>
+                    `<th>الأسبوع ${w.order}${w.label ? `<br/><span class="grid-week-date">${esc(w.label)}</span>` : ""}</th>`
+                )
+                .join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .map(
+                (r) => `
+              <tr>
+                <td class="grid-row-header">${cell(r.label)}</td>
+                ${weekChunk
+                  .map((w) => `<td>${cellMultiline(r.cells[w.order - 1])}</td>`)
+                  .join("")}
+              </tr>`
+              )
+              .join("")}
+          </tbody>
+        </table>`
+          )
+          .join("")}
+      </section>`;
+    }
+
     default:
       return "";
   }
@@ -217,6 +281,14 @@ export function buildGenericPlanHtml(data: PlanExportData): string {
   }
   .goal-block h3 { font-size: 13px; margin: 0 0 8px; color: #0f6e63; }
   .program-title { font-size: 12px; margin: 10px 0 4px; color: #14231f; }
+
+  .grid-table {
+    table-layout: fixed; margin-bottom: 16px; page-break-inside: avoid;
+  }
+  .grid-table th, .grid-table td { font-size: 9.5px; padding: 4px 6px; line-height: 1.5; }
+  .grid-table .grid-row-header { width: 15%; background: #f4f7f6; color: #14231f; font-weight: bold; }
+  .grid-table thead .grid-row-header { background: #e2eeeb; color: #0f6e63; }
+  .grid-table .grid-week-date { font-weight: normal; color: #56706e; font-size: 8.5px; }
 </style>
 </head>
 <body>

@@ -226,6 +226,14 @@ async function main() {
       kind: "DETAIL_TABLE",
       configJson: { programsSectionKey: "programs" },
     },
+    {
+      key: "weekly_schedule",
+      order: 6,
+      titleAr: "الجدول الأسبوعي للأنشطة",
+      titleEn: "Weekly Activity Schedule",
+      kind: "WEEKLY_ACTIVITY_GRID",
+      configJson: { weeksCount: 18 },
+    },
   ] as const;
 
   await seedSections(studentActivityTemplate.id, STUDENT_ACTIVITY_SECTIONS);

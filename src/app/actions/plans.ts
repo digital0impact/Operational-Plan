@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireSchoolId } from "@/lib/auth-guards";
-import { sectionConfigString } from "@/lib/plan-data";
+import { sectionConfigString, sectionConfigNumber } from "@/lib/plan-data";
 import type { ActionState } from "@/app/actions/auth";
 import type { PlanTemplateSection } from "@/generated/prisma/client";
 
@@ -300,6 +300,64 @@ export async function savePlanDetailSectionAction(
         });
       }
     }
+  });
+
+  await markSectionComplete(planId, sectionKey, ctx.sections.length);
+  redirectToNextSection(ctx);
+}
+
+/**
+ * WEEKLY_ACTIVITY_GRID — جدول أسبوعي (صف × أسبوع). عدد الأسابيع ثابت
+ * (weeksCount من configJson)، وعدد الصفوف حرّ يحدده مدير المدرسة. هوية كل
+ * صف "موضعية" بترتيب إرساله في النموذج (rowLabel_0..rowLabel_{n-1}) لا
+ * بمعرّف ثابت — upsert بالترتيب بدل حذف/إعادة إنشاء الكل، حتى لا تُفقَد
+ * خلايا صف لم يتغيّر ترتيبه لمجرّد تعديل صف آخر.
+ */
+export async function saveWeeklyGridSectionAction(
+  planId: string,
+  sectionKey: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const schoolId = await requireSchoolId();
+  const ctx = await requireSectionContext(schoolId, planId, sectionKey);
+
+  const weeksCount = sectionConfigNumber(ctx.section.configJson, "weeksCount") ?? 18;
+  const rowCount = Math.max(0, Math.min(200, Number(formData.get("rowCount")) || 0));
+
+  await prisma.$transaction(async (tx) => {
+    for (let week = 1; week <= weeksCount; week++) {
+      const label = ((formData.get(`weekLabel_${week}`) as string) ?? "").trim();
+      await tx.planGridWeek.upsert({
+        where: { planId_sectionKey_order: { planId, sectionKey, order: week } },
+        update: { label },
+        create: { planId, sectionKey, order: week, label },
+      });
+    }
+
+    for (let i = 0; i < rowCount; i++) {
+      const label = ((formData.get(`rowLabel_${i}`) as string) ?? "").trim();
+      const row = await tx.planGridRow.upsert({
+        where: { planId_sectionKey_order: { planId, sectionKey, order: i } },
+        update: { label },
+        create: { planId, sectionKey, order: i, label },
+      });
+
+      for (let week = 1; week <= weeksCount; week++) {
+        const content = ((formData.get(`cell_${i}_${week}`) as string) ?? "").trim();
+        await tx.planGridCell.upsert({
+          where: { rowId_weekOrder: { rowId: row.id, weekOrder: week } },
+          update: { content },
+          create: { rowId: row.id, weekOrder: week, content },
+        });
+      }
+    }
+
+    // صفوف زائدة تجاوزت العدد المُرسَل (حُذفت من الواجهة) — يحذف خلاياها
+    // تلقائيًا بالـ cascade
+    await tx.planGridRow.deleteMany({
+      where: { planId, sectionKey, order: { gte: rowCount } },
+    });
   });
 
   await markSectionComplete(planId, sectionKey, ctx.sections.length);
