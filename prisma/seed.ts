@@ -367,6 +367,153 @@ async function main() {
     `تمت زراعة نوع الخطة "student_guidance" وقالبه (${STUDENT_GUIDANCE_SECTIONS.length} أقسام).`
   );
 
+  // خطة التقويم الذاتي — الدليل يشترط صراحةً أربعة عناصر: أهداف عملية
+  // التقويم، مؤشرات تحقق الأهداف وآلية متابعتها، توزيع الأدوار
+  // والمسؤوليات، ومتطلبات التنفيذ وأدوات التقويم الذاتي — لذا وحدها من
+  // بين الأنواع الجديدة تستخدم كل أنواع الأقسام الخمسة، بنفس ثراء الخطة
+  // التشغيلية. مخرجاتها (الدليل/الشاهد على كل أداة) تُغذّي خطة التحسين
+  // والتطوير والاستدامة التالية.
+  const selfEvaluationType = await prisma.planType.upsert({
+    where: { key: "self_evaluation" },
+    update: { nameAr: "خطة التقويم الذاتي", nameEn: "Self-Evaluation Plan" },
+    create: {
+      key: "self_evaluation",
+      nameAr: "خطة التقويم الذاتي",
+      nameEn: "Self-Evaluation Plan",
+      isCustom: false,
+    },
+  });
+
+  const selfEvaluationTemplate = await prisma.planTemplate.upsert({
+    where: { planTypeId_version: { planTypeId: selfEvaluationType.id, version: 1 } },
+    update: { isActive: true },
+    create: { planTypeId: selfEvaluationType.id, version: 1, isActive: true },
+  });
+
+  const SELF_EVALUATION_SECTIONS: readonly SectionSeed[] = [
+    {
+      key: "general_info",
+      order: 1,
+      titleAr: "معلومات عامة",
+      titleEn: "General Information",
+      kind: "STATIC_INFO",
+      configJson: {
+        description:
+          "هذا القسم تعريفي بخطة التقويم الذاتي. تُجمَع بيانات التقويم من مصادر متعددة (تحليل الوثائق، الاستبانات، الملاحظة الصفية، ملاحظة البيئة المدرسية، مقابلات المعلمين والمتعلمين والموجه الطالبي). مخرجات هذه الخطة (النتائج والشواهد) هي المدخل الأساسي لخطة التحسين والتطوير والاستدامة.",
+      },
+    },
+    {
+      key: "goals",
+      order: 2,
+      titleAr: "أهداف التقويم الذاتي",
+      titleEn: "Self-Evaluation Goals",
+      kind: "OBJECTIVES_LIST",
+      configJson: {
+        itemLabel: "هدف تقويم",
+        placeholder: "مثال: تقويم فاعلية الإدارة المدرسية، تقويم جودة التعليم والتعلم…",
+      },
+    },
+    {
+      key: "indicators",
+      order: 3,
+      titleAr: "مؤشرات تحقق الأهداف",
+      titleEn: "Achievement Indicators",
+      kind: "INDICATORS_LIST",
+      configJson: { objectivesSectionKey: "goals" },
+    },
+    {
+      key: "roles",
+      order: 4,
+      titleAr: "الأدوار والمسؤوليات",
+      titleEn: "Roles & Responsibilities",
+      kind: "PROGRAMS_LIST",
+      configJson: { objectivesSectionKey: "goals", itemLabel: "دور/مسؤولية" },
+    },
+    {
+      key: "tools_execution",
+      order: 5,
+      titleAr: "أدوات ومتطلبات التنفيذ",
+      titleEn: "Tools & Execution Requirements",
+      kind: "DETAIL_TABLE",
+      configJson: { programsSectionKey: "roles" },
+    },
+  ] as const;
+
+  await seedSections(selfEvaluationTemplate.id, SELF_EVALUATION_SECTIONS);
+  console.log(
+    `تمت زراعة نوع الخطة "self_evaluation" وقالبه (${SELF_EVALUATION_SECTIONS.length} أقسام).`
+  );
+
+  // خطة التحسين والتطوير والاستدامة — مدخلها الرسمي الأول هو نتائج خطة
+  // التقويم الذاتي أعلاه؛ لا يوجد بعد ربط تقني مباشر بين الخطتين (كل خطة
+  // Plan مستقلة)، فالقسم التعريفي يوجّه لإدخال النتائج يدويًا استنادًا
+  // إلى ملخص خطة التقويم الذاتي لنفس العام الدراسي.
+  const improvementPlanType = await prisma.planType.upsert({
+    where: { key: "improvement_plan" },
+    update: {
+      nameAr: "خطة التحسين والتطوير والاستدامة",
+      nameEn: "Improvement, Development & Sustainability Plan",
+    },
+    create: {
+      key: "improvement_plan",
+      nameAr: "خطة التحسين والتطوير والاستدامة",
+      nameEn: "Improvement, Development & Sustainability Plan",
+      isCustom: false,
+    },
+  });
+
+  const improvementPlanTemplate = await prisma.planTemplate.upsert({
+    where: { planTypeId_version: { planTypeId: improvementPlanType.id, version: 1 } },
+    update: { isActive: true },
+    create: { planTypeId: improvementPlanType.id, version: 1, isActive: true },
+  });
+
+  const IMPROVEMENT_PLAN_SECTIONS: readonly SectionSeed[] = [
+    {
+      key: "general_info",
+      order: 1,
+      titleAr: "معلومات عامة",
+      titleEn: "General Information",
+      kind: "STATIC_INFO",
+      configJson: {
+        description:
+          "قبل تعبئة هذه الخطة، راجع نتائج خطة التقويم الذاتي لهذا العام الدراسي (النتائج والتغذية الراجعة) — هي المدخل الرسمي الأول لتحديد جوانب التحسين هنا.",
+      },
+    },
+    {
+      key: "improvement_areas",
+      order: 2,
+      titleAr: "جوانب التحسين",
+      titleEn: "Improvement Areas",
+      kind: "OBJECTIVES_LIST",
+      configJson: {
+        itemLabel: "جانب تحسين",
+        placeholder: "جانب مستخلَص من نتائج التقويم الذاتي والتغذية الراجعة…",
+      },
+    },
+    {
+      key: "actions",
+      order: 3,
+      titleAr: "إجراءات التحسين والاستدامة",
+      titleEn: "Improvement & Sustainability Actions",
+      kind: "PROGRAMS_LIST",
+      configJson: { objectivesSectionKey: "improvement_areas", itemLabel: "إجراء تحسين/استدامة" },
+    },
+    {
+      key: "detail_plan",
+      order: 4,
+      titleAr: "المسؤوليات والمتابعة",
+      titleEn: "Responsibilities & Follow-up",
+      kind: "DETAIL_TABLE",
+      configJson: { programsSectionKey: "actions" },
+    },
+  ] as const;
+
+  await seedSections(improvementPlanTemplate.id, IMPROVEMENT_PLAN_SECTIONS);
+  console.log(
+    `تمت زراعة نوع الخطة "improvement_plan" وقالبه (${IMPROVEMENT_PLAN_SECTIONS.length} أقسام).`
+  );
+
   await prisma.$disconnect();
 }
 
