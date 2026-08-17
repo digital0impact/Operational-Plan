@@ -8,7 +8,6 @@ import { getSchoolPlans } from "@/lib/plan-data";
 import { CopyLink } from "@/components/copy-link";
 import {
   TOTAL_WIZARD_STEPS,
-  WIZARD_STAGES,
   WIZARD_STEP_TITLES,
   REVIEWER_ROLE_LABELS,
   findLabel,
@@ -48,79 +47,13 @@ export default async function DashboardPage() {
           مرحبًا، {user!.name} 👋
         </h1>
         <p className="mt-1 text-muted">
-          تابع إعداد الخطة التشغيلية لمدرسة {school.name} من هنا.
+          كل خطط مدرسة {school.name} في مكان واحد.
         </p>
       </div>
 
       <section className="rounded-2xl border border-border bg-surface p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-ink">
-              نسبة إنجاز الخطة التشغيلية
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              {completedCount} من {TOTAL_WIZARD_STEPS} خطوة
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {completedCount > 0 ? (
-              <a
-                href="/export"
-                className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent"
-              >
-                تصدير PDF
-              </a>
-            ) : null}
-            {isPlanComplete ? (
-              <span className="rounded-lg bg-accent-soft px-4 py-2.5 text-sm font-semibold text-accent">
-                الخطة مكتملة ✓
-              </span>
-            ) : (
-              <Link
-                href={`/wizard/${continueStep}`}
-                className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition hover:opacity-90"
-              >
-                {completedCount === 0 ? "ابدأ إعداد الخطة" : "متابعة الخطة"}
-              </Link>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-surface-2">
-          <div
-            className="h-full rounded-full bg-accent transition-all"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <p className="mt-2 font-mono text-xs text-muted">{progressPercent}%</p>
-
-        <div className="mt-6 flex flex-wrap gap-2">
-          {WIZARD_STAGES.map((stage) => {
-            const stageDone = Array.from(
-              { length: stage.to - stage.from + 1 },
-              (_, i) => stage.from + i
-            ).every((step) => completedSteps.has(step));
-            return (
-              <span
-                key={stage.key}
-                className={
-                  "rounded-full border px-3 py-1 text-xs " +
-                  (stageDone
-                    ? "border-accent/30 bg-accent-soft text-accent"
-                    : "border-border bg-surface-2 text-muted")
-                }
-              >
-                {stageDone ? "✓ " : ""}
-                {stage.label} · {stage.from}–{stage.to}
-              </span>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-border bg-surface p-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-ink">خطط أخرى</h2>
+          <h2 className="text-lg font-bold text-ink">كل الخطط</h2>
           <Link
             href="/plans/new"
             className="rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent"
@@ -129,45 +62,92 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {otherPlans.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">
-            إلى جانب الخطة التشغيلية، يمكنك إنشاء أنواع خطط أخرى (كخطة النشاط
-            الطلابي) من هنا.
-          </p>
-        ) : (
-          <ul className="mt-4 flex flex-col gap-3">
-            {otherPlans.map((plan) => (
-              <li
-                key={plan.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-3.5"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-ink">
-                    {plan.planTypeName}{" "}
-                    <span className="font-normal text-muted">· {plan.academicYear}</span>
-                  </p>
-                  <p className="mt-1 text-xs text-muted">
-                    {plan.completedSections} من {plan.totalSections} أقسام ·{" "}
-                    {plan.progressPercent}%
-                  </p>
-                </div>
-                {plan.status === "COMPLETE" ? (
+        <ul className="mt-4 flex flex-col gap-3">
+          <li className="rounded-lg border border-border bg-surface-2 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-ink">الخطة التشغيلية</p>
+                <p className="mt-1 text-xs text-muted">
+                  {completedCount} من {TOTAL_WIZARD_STEPS} خطوة · {progressPercent}%
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {completedCount > 0 ? (
+                  <a
+                    href="/export"
+                    className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
+                  >
+                    تصدير PDF
+                  </a>
+                ) : null}
+                {isPlanComplete ? (
                   <span className="rounded-lg bg-accent-soft px-3.5 py-2 text-xs font-semibold text-accent">
                     مكتملة ✓
                   </span>
                 ) : (
                   <Link
-                    href={`/plans/${plan.id}/${plan.nextSectionKey}`}
+                    href={`/wizard/${continueStep}`}
                     className="rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink transition hover:opacity-90"
                   >
-                    متابعة
+                    {completedCount === 0 ? "ابدأ" : "متابعة"}
                   </Link>
                 )}
-              </li>
-            ))}
-          </ul>
-        )}
+              </div>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface">
+              <div
+                className="h-full rounded-full bg-accent transition-all"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </li>
+
+          {otherPlans.map((plan) => (
+            <li
+              key={plan.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-4"
+            >
+              <div>
+                <p className="text-sm font-semibold text-ink">
+                  {plan.planTypeName}{" "}
+                  <span className="font-normal text-muted">· {plan.academicYear}</span>
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {plan.completedSections} من {plan.totalSections} أقسام ·{" "}
+                  {plan.progressPercent}%
+                </p>
+              </div>
+              {plan.status === "COMPLETE" ? (
+                <span className="rounded-lg bg-accent-soft px-3.5 py-2 text-xs font-semibold text-accent">
+                  مكتملة ✓
+                </span>
+              ) : (
+                <Link
+                  href={`/plans/${plan.id}/${plan.nextSectionKey}`}
+                  className="rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink transition hover:opacity-90"
+                >
+                  متابعة
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+
+        {otherPlans.length === 0 ? (
+          <p className="mt-3 text-xs text-muted">
+            يمكنك إنشاء أنواع خطط أخرى (كخطة النشاط الطلابي أو رعاية الموهوبين)
+            من زر «إنشاء خطة جديدة» أعلاه.
+          </p>
+        ) : null}
       </section>
+
+      <div className="flex items-center gap-3 pt-2">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+          تفاصيل الخطة التشغيلية
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
 
       <section className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-border bg-surface p-6">
