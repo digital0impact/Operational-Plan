@@ -8,7 +8,6 @@ import { getSchoolPlans } from "@/lib/plan-data";
 import { CopyLink } from "@/components/copy-link";
 import {
   TOTAL_WIZARD_STEPS,
-  WIZARD_STEP_TITLES,
   REVIEWER_ROLE_LABELS,
   findLabel,
   SCHOOL_GENDER_OPTIONS,
@@ -51,61 +50,24 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-surface p-6">
-          <h2 className="text-base font-bold text-ink">بيانات المدرسة</h2>
-          <dl className="mt-4 grid grid-cols-2 gap-y-3 text-sm">
-            <dt className="text-muted">اسم المدرسة</dt>
-            <dd className="text-ink">{school.name}</dd>
-            <dt className="text-muted">نوع المدرسة</dt>
-            <dd className="text-ink">
-              {findLabel(SCHOOL_GENDER_OPTIONS, school.gender)}
-            </dd>
-            <dt className="text-muted">تصنيف المدرسة</dt>
-            <dd className="text-ink">
-              {findLabel(SCHOOL_CLASSIFICATION_OPTIONS, school.schoolSystem)}
-            </dd>
-            <dt className="text-muted">المرحلة الدراسية</dt>
-            <dd className="text-ink">
-              {findLabel(SCHOOL_STAGE_OPTIONS, school.unit)}
-            </dd>
-          </dl>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-surface p-6">
-          <h2 className="text-base font-bold text-ink">خطوات المعالج</h2>
-          <ul className="mt-4 flex max-h-80 flex-col gap-2 overflow-y-auto">
-            {Object.entries(WIZARD_STEP_TITLES).map(([step, title]) => {
-              const stepNumber = Number(step);
-              const done = completedSteps.has(stepNumber);
-              const isNext = stepNumber === continueStep && !done;
-              return (
-                <li key={step} className="flex items-center gap-3 text-sm">
-                  <span
-                    className={
-                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-bold " +
-                      (done
-                        ? "bg-accent text-accent-ink"
-                        : "border border-border text-muted")
-                    }
-                  >
-                    {done ? "✓" : step}
-                  </span>
-                  <Link
-                    href={`/wizard/${step}`}
-                    className={
-                      "flex-1 " +
-                      (isNext ? "font-semibold text-accent" : "text-ink")
-                    }
-                  >
-                    {title}
-                    {stepNumber >= 16 ? ` — هدف ${stepNumber - 15}` : ""}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+      <section className="rounded-2xl border border-border bg-surface p-6">
+        <h2 className="text-base font-bold text-ink">بيانات المدرسة</h2>
+        <dl className="mt-4 grid grid-cols-2 gap-y-3 text-sm sm:grid-cols-4">
+          <dt className="text-muted">اسم المدرسة</dt>
+          <dd className="text-ink">{school.name}</dd>
+          <dt className="text-muted">نوع المدرسة</dt>
+          <dd className="text-ink">
+            {findLabel(SCHOOL_GENDER_OPTIONS, school.gender)}
+          </dd>
+          <dt className="text-muted">تصنيف المدرسة</dt>
+          <dd className="text-ink">
+            {findLabel(SCHOOL_CLASSIFICATION_OPTIONS, school.schoolSystem)}
+          </dd>
+          <dt className="text-muted">المرحلة الدراسية</dt>
+          <dd className="text-ink">
+            {findLabel(SCHOOL_STAGE_OPTIONS, school.unit)}
+          </dd>
+        </dl>
       </section>
 
       <section className="rounded-2xl border border-border bg-surface p-6">
