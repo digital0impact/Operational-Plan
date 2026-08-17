@@ -238,7 +238,7 @@ export function buildPlanHtml(data: PlanData): string {
     </div>
 
     <p class="cover-footer">
-      أُنشئت هذه الوثيقة آليًا عبر منصة الخطة التشغيلية بتاريخ
+      أُنشئت هذه الوثيقة آليًا عبر منصة تخطيط بتاريخ
       ${new Intl.DateTimeFormat("ar", { dateStyle: "long" }).format(data.generatedAt)}
     </p>
   </section>

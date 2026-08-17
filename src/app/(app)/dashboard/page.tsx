@@ -81,69 +81,70 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <ul className="mt-4 flex flex-col gap-3">
-          <li className="rounded-lg border border-border bg-surface-2 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-ink">الخطة التشغيلية</p>
-                <p className="mt-1 text-xs text-muted">
-                  {completedCount} من {TOTAL_WIZARD_STEPS} خطوة · {progressPercent}%
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {completedCount > 0 ? (
-                  <a
-                    href="/export"
-                    className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
-                  >
-                    تصدير PDF
-                  </a>
-                ) : null}
-                {isPlanComplete ? (
-                  <span className="rounded-lg bg-accent-soft px-3.5 py-2 text-xs font-semibold text-accent">
-                    مكتملة ✓
-                  </span>
-                ) : (
-                  <Link
-                    href={`/wizard/${continueStep}`}
-                    className="rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink transition hover:opacity-90"
-                  >
-                    {completedCount === 0 ? "ابدأ" : "متابعة"}
-                  </Link>
-                )}
-              </div>
+        <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <li className="flex flex-col gap-3 rounded-lg border border-border bg-surface-2 p-4">
+            <div>
+              <p className="text-sm font-semibold text-ink">الخطة التشغيلية</p>
+              <p className="mt-1 text-xs text-muted">
+                {completedCount} من {TOTAL_WIZARD_STEPS} خطوة · {progressPercent}%
+              </p>
             </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface">
+            <div className="h-2 overflow-hidden rounded-full bg-surface">
               <div
                 className="h-full rounded-full bg-accent transition-all"
                 style={{ width: `${progressPercent}%` }}
               />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {isPlanComplete ? (
+                <span className="rounded-lg bg-accent-soft px-3.5 py-2 text-xs font-semibold text-accent">
+                  مكتملة ✓
+                </span>
+              ) : (
+                <Link
+                  href={`/wizard/${continueStep}`}
+                  className="rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink transition hover:opacity-90"
+                >
+                  {completedCount === 0 ? "ابدأ" : "متابعة"}
+                </Link>
+              )}
+              {completedCount > 0 ? (
+                <a
+                  href="/export"
+                  className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
+                >
+                  تصدير PDF
+                </a>
+              ) : null}
             </div>
           </li>
 
           {otherPlans.map((plan) => (
             <li
               key={plan.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-4"
+              className="flex flex-col gap-3 rounded-lg border border-border bg-surface-2 p-4"
             >
               <div>
-                <p className="text-sm font-semibold text-ink">
-                  {plan.planTypeName}{" "}
-                  <span className="font-normal text-muted">· {plan.academicYear}</span>
-                </p>
+                <p className="text-sm font-semibold text-ink">{plan.planTypeName}</p>
                 <p className="mt-1 text-xs text-muted">
-                  {plan.completedSections} من {plan.totalSections} أقسام ·{" "}
-                  {plan.progressPercent}%
+                  {plan.academicYear} · {plan.completedSections} من {plan.totalSections}{" "}
+                  أقسام · {plan.progressPercent}%
                 </p>
               </div>
+              <div className="h-2 overflow-hidden rounded-full bg-surface">
+                <div
+                  className="h-full rounded-full bg-accent transition-all"
+                  style={{ width: `${plan.progressPercent}%` }}
+                />
+              </div>
               {plan.status === "COMPLETE" ? (
-                <span className="rounded-lg bg-accent-soft px-3.5 py-2 text-xs font-semibold text-accent">
+                <span className="self-start rounded-lg bg-accent-soft px-3.5 py-2 text-xs font-semibold text-accent">
                   مكتملة ✓
                 </span>
               ) : (
                 <Link
                   href={`/plans/${plan.id}/${plan.nextSectionKey}`}
-                  className="rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink transition hover:opacity-90"
+                  className="self-start rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink transition hover:opacity-90"
                 >
                   متابعة
                 </Link>

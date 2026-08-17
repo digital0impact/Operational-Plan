@@ -1,4 +1,4 @@
-// Prisma schema — منصة الخطة التشغيلية لمدارس التعليم العام
+// Prisma schema — منصة تخطيط لمدارس التعليم العام
 // المرحلة الحالية: تسجيل المدرسة + تسجيل الدخول + معالج الخطة الكامل (25 خطوة)
 // + معمار الخطط المتعددة (PlanType/PlanTemplate/PlanTemplateSection ثم
 // Plan/PlanObjective/PlanProgram/PlanActivity/PlanIndicator/PlanEvidence):

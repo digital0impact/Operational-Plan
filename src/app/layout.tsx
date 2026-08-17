@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "منصة الخطة التشغيلية",
-  description: "منصة إعداد الخطة التشغيلية لمدارس التعليم العام",
+  title: "منصة تخطيط",
+  description: "منصة تخطيط لإعداد خطط مدارس التعليم العام",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
