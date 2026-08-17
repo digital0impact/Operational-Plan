@@ -343,7 +343,7 @@ model PlanTemplateSection {
   order      Int     @default(0)
   titleAr    String
   titleEn    String?
-  kind       String // STATIC_INFO | ACKNOWLEDGEMENT_LIST | REFERENCE_LIST | OBJECTIVES_LIST | INDICATORS_LIST | SWOT_GRID | REPEATABLE_TEXT_LIST | PROGRAMS_LIST | DETAIL_TABLE | WEEKLY_ACTIVITY_GRID
+  kind       String // STATIC_INFO | ACKNOWLEDGEMENT_LIST | REFERENCE_LIST | OBJECTIVES_LIST | INDICATORS_LIST | SWOT_GRID | REPEATABLE_TEXT_LIST | PROGRAMS_LIST | DETAIL_TABLE | WEEKLY_ACTIVITY_GRID | PROGRAM_WEEK_TAGS | COMBINED_CALENDAR
   configJson Json?
 
   templateId String
@@ -449,6 +449,7 @@ model PlanProgram {
   objective   PlanObjective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
 
   activities PlanActivity[]
+  weekTags   PlanProgramWeekTag[]
 
   @@map("plan_programs")
 }
@@ -554,4 +555,21 @@ model PlanGridCell {
 
   @@unique([rowId, weekOrder])
   @@map("plan_grid_cells")
+}
+
+/// وسم برنامج بأسبوع من أسابيع "الخطة الفصلية" (COMBINED_CALENDAR) — قسم
+/// PROGRAM_WEEK_TAGS في كل من خطط التوجيه الطالبي/النشاط الطلابي/الإرشاد
+/// الصحي يديره. علاقة عديد-إلى-عديد بسيطة (برنامج واحد قد يتكرر في أكثر
+/// من أسبوع، مثل برنامج تعزيز السلوك الإيجابي المستمر أسبوعيًا)، بلا جدول
+/// وسيط لاسم الأسبوع — القيمة رقم الأسبوع فقط، تُقرأ عبر PlanGridWeek
+/// الخاصة بخطة "الخطة الفصلية" نفسها عند العرض/التصدير.
+model PlanProgramWeekTag {
+  id        String @id @default(cuid())
+  weekOrder Int
+
+  programId String
+  program   PlanProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, weekOrder])
+  @@map("plan_program_week_tags")
 }

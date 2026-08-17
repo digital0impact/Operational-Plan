@@ -217,6 +217,84 @@ function renderSection(section: PlanExportSection): string {
       </section>`;
     }
 
+    case "COMBINED_CALENDAR": {
+      const { weeks, computedRows, valueRows } = section.calendar;
+      const weekChunks = chunk(weeks, 5);
+
+      const legend = new Map<string, string>();
+      computedRows.forEach((row) => row.legend.forEach((l) => legend.set(l.label, l.color)));
+
+      return `
+      <section class="doc-page">
+        <h2 class="section-title">${esc(section.titleAr)}</h2>
+        ${
+          legend.size > 0
+            ? `<div class="calendar-legend">
+          ${Array.from(legend.entries())
+            .map(
+              ([label, color]) =>
+                `<span class="legend-item"><span class="legend-dot" style="background:${esc(color)}"></span>${esc(label)}</span>`
+            )
+            .join("")}
+        </div>`
+            : ""
+        }
+        ${weekChunks
+          .map(
+            (weekChunk) => `
+        <table class="grid-table">
+          <thead>
+            <tr>
+              <th class="grid-row-header">الصف / الفئة</th>
+              ${weekChunk
+                .map(
+                  (w) =>
+                    `<th>الأسبوع ${w.order}${w.label ? `<br/><span class="grid-week-date">${esc(w.label)}</span>` : ""}</th>`
+                )
+                .join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${computedRows
+              .map(
+                (row) => `
+              <tr>
+                <td class="grid-row-header">${cell(row.titleAr)}</td>
+                ${weekChunk
+                  .map((w) => {
+                    const items = row.weeks.find((x) => x.weekOrder === w.order)?.items ?? [];
+                    return `<td>${
+                      items.length === 0
+                        ? `<span class="empty">—</span>`
+                        : items
+                            .map(
+                              (it) => `<span style="color:${esc(it.color)}">${esc(it.text)}</span>`
+                            )
+                            .join("<br/>")
+                    }</td>`;
+                  })
+                  .join("")}
+              </tr>`
+              )
+              .join("")}
+            ${valueRows
+              .map(
+                (r) => `
+              <tr>
+                <td class="grid-row-header">${cell(r.label)}</td>
+                ${weekChunk
+                  .map((w) => `<td>${cellMultiline(r.cells[w.order - 1])}</td>`)
+                  .join("")}
+              </tr>`
+              )
+              .join("")}
+          </tbody>
+        </table>`
+          )
+          .join("")}
+      </section>`;
+    }
+
     default:
       return "";
   }
@@ -292,6 +370,10 @@ function sharedStyles(): string {
   .grid-table .grid-row-header { width: 15%; background: #f4f7f6; color: #14231f; font-weight: bold; }
   .grid-table thead .grid-row-header { background: #e2eeeb; color: #0f6e63; }
   .grid-table .grid-week-date { font-weight: normal; color: #56706e; font-size: 8.5px; }
+
+  .calendar-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+  .calendar-legend .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #56706e; }
+  .calendar-legend .legend-dot { width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
   `;
 }
 

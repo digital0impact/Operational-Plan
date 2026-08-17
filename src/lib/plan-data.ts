@@ -208,6 +208,48 @@ export async function getDetailPlanData(
 }
 
 /**
+ * PROGRAM_WEEK_TAGS: نفس تسلسل حلّ programsSectionKey←objectivesSectionKey
+ * في getDetailPlanData، لكن تُحمَّل معه أسابيع "الخطة الفصلية" الموسومة
+ * لكل برنامج (PlanProgramWeekTag) بدل نشاطه التنفيذي — برنامج واحد قد
+ * يتكرر في أكثر من أسبوع.
+ */
+export async function getProgramWeekTagsData(
+  templateId: string,
+  planId: string,
+  programsSectionKey: string
+) {
+  const programsSection = await prisma.planTemplateSection.findUnique({
+    where: { templateId_key: { templateId, key: programsSectionKey } },
+  });
+  const objectivesSectionKey = sectionConfigString(
+    programsSection?.configJson,
+    "objectivesSectionKey"
+  );
+  if (!objectivesSectionKey) return [];
+
+  const objectives = await prisma.planObjective.findMany({
+    where: { planId, sectionKey: objectivesSectionKey },
+    orderBy: { order: "asc" },
+    include: {
+      programs: {
+        orderBy: { order: "asc" },
+        include: { weekTags: true },
+      },
+    },
+  });
+
+  return objectives.map((o) => ({
+    objectiveId: o.id,
+    text: o.text,
+    programs: o.programs.map((p) => ({
+      programId: p.id,
+      name: p.name,
+      weeks: p.weekTags.map((t) => t.weekOrder),
+    })),
+  }));
+}
+
+/**
  * جدول أسبوعي (WEEKLY_ACTIVITY_GRID): عدد الأسابيع ثابت (weeksCount) وعدد
  * الصفوف حرّ يحدده مدير المدرسة. تُبنى أعمدة الأسابيع دائمًا كاملة العدد
  * (1..weeksCount) حتى لو لم تُحفَظ تسمياتها بعد، ليعرضها النموذج فارغة
@@ -250,6 +292,119 @@ export async function getWeeklyGridData(
   };
 }
 
+type CombinedCalendarSource = { planTypeKey: string; label: string; color: string };
+type CombinedCalendarRowConfig = { key: string; titleAr: string; sources: CombinedCalendarSource[] };
+
+function parseCombinedCalendarRows(configJson: unknown): CombinedCalendarRowConfig[] {
+  if (
+    configJson &&
+    typeof configJson === "object" &&
+    "rows" in configJson &&
+    Array.isArray((configJson as Record<string, unknown>).rows)
+  ) {
+    return (configJson as { rows: CombinedCalendarRowConfig[] }).rows;
+  }
+  return [];
+}
+
+/**
+ * يحمّل برامج نوع خطة مصدر (بالاسم + أسابيعها المُوسومة) لمدرسة وسنة
+ * دراسية معيّنتين — يُستخدَم في تجميع "الخطة الفصلية". يبحث تلقائيًا عن
+ * أول قسم PROGRAMS_LIST في قالب ذلك النوع (بدل افتراض مفتاح ثابت "programs"،
+ * حتى لو تغيّر مستقبلًا). يُعيد [] إن لم توجد خطة من هذا النوع لنفس
+ * المدرسة/السنة بعد (لم تُنشَأ، أو أُنشئت بقالب بلا قسم برامج).
+ */
+async function loadSourcePrograms(schoolId: string, academicYear: string, planTypeKey: string) {
+  const plan = await prisma.plan.findFirst({
+    where: { schoolId, academicYear, template: { planType: { key: planTypeKey } } },
+    include: { template: { include: { sections: true } } },
+  });
+  if (!plan) return [];
+
+  const programsSection = plan.template.sections.find((s) => s.kind === "PROGRAMS_LIST");
+  if (!programsSection) return [];
+
+  const objectivesSectionKey = sectionConfigString(
+    programsSection.configJson,
+    "objectivesSectionKey"
+  );
+  if (!objectivesSectionKey) return [];
+
+  const objectives = await prisma.planObjective.findMany({
+    where: { planId: plan.id, sectionKey: objectivesSectionKey },
+    include: { programs: { include: { weekTags: true } } },
+  });
+
+  return objectives.flatMap((o) =>
+    o.programs.map((p) => ({ name: p.name, weeks: p.weekTags.map((t) => t.weekOrder) }))
+  );
+}
+
+export type CombinedCalendarComputedRow = {
+  titleAr: string;
+  legend: { label: string; color: string }[];
+  weeks: { weekOrder: number; items: { text: string; color: string }[] }[];
+};
+
+/**
+ * قسم COMBINED_CALENDAR — "الخطة الفصلية": صفوف مُشتقّة تلقائيًا (computedRows،
+ * من برامج خطط مصدر أخرى لنفس المدرسة والسنة الدراسية، مُوسومة بأسبوعها عبر
+ * PROGRAM_WEEK_TAGS) مدموجة مع صفوف تُدخَل يدويًا هنا (valueRows، مثل "القيم"
+ * التي لا خطة مصدر لها) — تُخزَّن الأخيرة وتسميات الأعمدة بنفس آلية
+ * WEEKLY_ACTIVITY_GRID (PlanGridRow/PlanGridWeek/PlanGridCell)، فتُعاد
+ * استخدامها كما هي (getWeeklyGridData وsaveWeeklyGridSectionAction).
+ */
+async function computeCombinedCalendar(
+  schoolId: string,
+  planId: string,
+  academicYear: string,
+  section: { key: string; configJson: unknown }
+) {
+  const weeksCount = sectionConfigNumber(section.configJson, "weeksCount") ?? 14;
+  const rowsConfig = parseCombinedCalendarRows(section.configJson);
+
+  const computedRows: CombinedCalendarComputedRow[] = await Promise.all(
+    rowsConfig.map(async (rc) => {
+      const sourceResults = await Promise.all(
+        rc.sources.map(async (src) => ({
+          color: src.color,
+          label: src.label,
+          programs: await loadSourcePrograms(schoolId, academicYear, src.planTypeKey),
+        }))
+      );
+      const weeks = Array.from({ length: weeksCount }, (_, i) => {
+        const weekOrder = i + 1;
+        const items = sourceResults.flatMap((sr) =>
+          sr.programs
+            .filter((p) => p.weeks.includes(weekOrder))
+            .map((p) => ({ text: p.name, color: sr.color }))
+        );
+        return { weekOrder, items };
+      });
+      return {
+        titleAr: rc.titleAr,
+        legend: sourceResults.map((sr) => ({ label: sr.label, color: sr.color })),
+        weeks,
+      };
+    })
+  );
+
+  const grid = await getWeeklyGridData(planId, section.key, weeksCount);
+
+  return { weeksCount, weeks: grid.weeks, computedRows, valueRows: grid.rows };
+}
+
+/** يحمّل بيانات "الخطة الفصلية" لعرضها في صفحة القسم — يتحقّق من ملكية
+ * المدرسة عبر loadPlanShell، ويعيد null إن لم توجد الخطة أو لم يوجد فيها
+ * قسم COMBINED_CALENDAR. */
+export async function getCombinedCalendarData(schoolId: string, planId: string) {
+  const shell = await loadPlanShell(schoolId, planId);
+  if (!shell) return null;
+  const section = shell.sections.find((s) => s.kind === "COMBINED_CALENDAR");
+  if (!section) return null;
+  return computeCombinedCalendar(schoolId, planId, shell.academicYear, section);
+}
+
 export type PlanExportSection =
   | { kind: "STATIC_INFO"; key: string; titleAr: string; description: string }
   | { kind: "OBJECTIVES_LIST"; key: string; titleAr: string; items: string[] }
@@ -276,6 +431,12 @@ export type PlanExportSection =
       key: string;
       titleAr: string;
       grid: Awaited<ReturnType<typeof getWeeklyGridData>>;
+    }
+  | {
+      kind: "COMBINED_CALENDAR";
+      key: string;
+      titleAr: string;
+      calendar: Awaited<ReturnType<typeof computeCombinedCalendar>>;
     };
 
 export type PlanExportData = {
@@ -298,7 +459,9 @@ export type PlanExportData = {
 async function buildExportSection(
   templateId: string,
   planId: string,
-  section: { key: string; titleAr: string; kind: string; configJson: unknown }
+  section: { key: string; titleAr: string; kind: string; configJson: unknown },
+  schoolId: string,
+  academicYear: string
 ): Promise<PlanExportSection | null> {
   switch (section.kind) {
     case "STATIC_INFO":
@@ -350,6 +513,10 @@ async function buildExportSection(
       const grid = await getWeeklyGridData(planId, section.key, weeksCount);
       return { kind: "WEEKLY_ACTIVITY_GRID", key: section.key, titleAr: section.titleAr, grid };
     }
+    case "COMBINED_CALENDAR": {
+      const calendar = await computeCombinedCalendar(schoolId, planId, academicYear, section);
+      return { kind: "COMBINED_CALENDAR", key: section.key, titleAr: section.titleAr, calendar };
+    }
     default:
       return null;
   }
@@ -371,7 +538,13 @@ export async function getPlanExportData(
 
   const sections: PlanExportSection[] = [];
   for (const section of shell.sections) {
-    const built = await buildExportSection(shell.templateId, planId, section);
+    const built = await buildExportSection(
+      shell.templateId,
+      planId,
+      section,
+      schoolId,
+      shell.academicYear
+    );
     if (built) sections.push(built);
   }
 
@@ -415,7 +588,13 @@ export async function getSectionExportData(
   const section = shell.sections.find((s) => s.key === sectionKey);
   if (!section) return null;
 
-  const built = await buildExportSection(shell.templateId, planId, section);
+  const built = await buildExportSection(
+    shell.templateId,
+    planId,
+    section,
+    schoolId,
+    shell.academicYear
+  );
   if (!built) return null;
 
   const school = await prisma.school.findUniqueOrThrow({ where: { id: schoolId } });

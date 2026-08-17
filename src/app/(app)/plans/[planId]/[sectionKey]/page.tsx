@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import {
+  getCombinedCalendarData,
   getDetailPlanData,
   getIndicatorsData,
   getObjectivesForSection,
+  getProgramWeekTagsData,
   getProgramsData,
   getWeeklyGridData,
   loadPlanShell,
@@ -18,6 +20,8 @@ import { IndicatorsListSection } from "@/components/plans/indicators-list-sectio
 import { ProgramsListSection } from "@/components/plans/programs-list-section";
 import { DetailTableSection } from "@/components/plans/detail-table-section";
 import { WeeklyActivityGridSection } from "@/components/plans/weekly-activity-grid-section";
+import { ProgramWeekTagsSection } from "@/components/plans/program-week-tags-section";
+import { CombinedCalendarRows } from "@/components/plans/combined-calendar-rows";
 
 export async function generateMetadata({
   params,
@@ -128,6 +132,48 @@ export default async function PlanSectionPage({
           weeks={grid.weeks}
           initialRows={grid.rows}
         />
+      );
+      break;
+    }
+
+    case "PROGRAM_WEEK_TAGS": {
+      const programsSectionKey = sectionConfigString(section.configJson, "programsSectionKey");
+      const weeksCount = sectionConfigNumber(section.configJson, "weeksCount") ?? 14;
+      const rows = programsSectionKey
+        ? await getProgramWeekTagsData(shell.templateId, planId, programsSectionKey)
+        : [];
+      body = (
+        <ProgramWeekTagsSection
+          planId={planId}
+          sectionKey={sectionKey}
+          weeksCount={weeksCount}
+          rows={rows}
+        />
+      );
+      break;
+    }
+
+    case "COMBINED_CALENDAR": {
+      const calendar = await getCombinedCalendarData(schoolId, planId);
+      body = calendar ? (
+        <div className="flex flex-col gap-6">
+          <CombinedCalendarRows weeks={calendar.weeks} computedRows={calendar.computedRows} />
+          <div className="border-t border-border pt-6">
+            <p className="mb-4 text-sm text-muted">
+              الصفّان أعلاه يُشتقّان تلقائيًا من الأسابيع المربوطة ببرامج خطط
+              التوجيه الطالبي والإرشاد الصحي والنشاط الطلابي — لا تُدخَل هنا.
+              أضف أدناه صف &quot;القيم&quot; (لا خطة مصدر له) وسمِّ الأسابيع إن رغبت.
+            </p>
+            <WeeklyActivityGridSection
+              planId={planId}
+              sectionKey={sectionKey}
+              weeks={calendar.weeks}
+              initialRows={calendar.valueRows}
+            />
+          </div>
+        </div>
+      ) : (
+        <p className="py-6 text-center text-sm text-muted">تعذّر تحميل الخطة الفصلية.</p>
       );
       break;
     }

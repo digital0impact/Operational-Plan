@@ -234,6 +234,14 @@ async function main() {
       kind: "WEEKLY_ACTIVITY_GRID",
       configJson: { weeksCount: 18 },
     },
+    {
+      key: "program_weeks",
+      order: 7,
+      titleAr: "ربط البرامج بأسابيع الخطة الفصلية",
+      titleEn: "Link Programs to Quarterly Plan Weeks",
+      kind: "PROGRAM_WEEK_TAGS",
+      configJson: { programsSectionKey: "programs", weeksCount: 14 },
+    },
   ] as const;
 
   await seedSections(studentActivityTemplate.id, STUDENT_ACTIVITY_SECTIONS);
@@ -368,11 +376,95 @@ async function main() {
       kind: "DETAIL_TABLE",
       configJson: { programsSectionKey: "programs" },
     },
+    {
+      key: "program_weeks",
+      order: 5,
+      titleAr: "ربط البرامج بأسابيع الخطة الفصلية",
+      titleEn: "Link Programs to Quarterly Plan Weeks",
+      kind: "PROGRAM_WEEK_TAGS",
+      configJson: { programsSectionKey: "programs", weeksCount: 14 },
+    },
   ] as const;
 
   await seedSections(studentGuidanceTemplate.id, STUDENT_GUIDANCE_SECTIONS);
   console.log(
     `تمت زراعة نوع الخطة "student_guidance" وقالبه (${STUDENT_GUIDANCE_SECTIONS.length} أقسام).`
+  );
+
+  // خطة الإرشاد الصحي — بنفس معمار "هدف ← برنامج ← تفاصيل تنفيذ" الذي أثبت
+  // نفسه في خطة التوجيه الطالبي (لا يوجد فصل رسمي منفرد لها في الدليل
+  // بمعزل عن التوجيه الطالبي، فبُنيت على نفس الشكل التنفيذي: فعاليات
+  // ومبادرات صحية مدرسية — فحص استكشافي، تهيئة العيادة، سلامة غذائية،
+  // متابعة الفريق الصحي… — لا حصر حالات صحية فردية).
+  const healthGuidanceType = await prisma.planType.upsert({
+    where: { key: "health_guidance" },
+    update: { nameAr: "خطة الإرشاد الصحي", nameEn: "Health Guidance Plan" },
+    create: {
+      key: "health_guidance",
+      nameAr: "خطة الإرشاد الصحي",
+      nameEn: "Health Guidance Plan",
+      isCustom: false,
+    },
+  });
+
+  const healthGuidanceTemplate = await prisma.planTemplate.upsert({
+    where: { planTypeId_version: { planTypeId: healthGuidanceType.id, version: 1 } },
+    update: { isActive: true },
+    create: { planTypeId: healthGuidanceType.id, version: 1, isActive: true },
+  });
+
+  const HEALTH_GUIDANCE_SECTIONS: readonly SectionSeed[] = [
+    {
+      key: "general_info",
+      order: 1,
+      titleAr: "معلومات عامة",
+      titleEn: "General Information",
+      kind: "STATIC_INFO",
+      configJson: {
+        description:
+          "هذا القسم يغطي الفعاليات والبرامج الصحية المدرسية التنفيذية (فحص استكشافي، تهيئة العيادة، سلامة غذائية، متابعة الفريق الصحي…) — لا يشمل حصر حالات صحية فردية للطلاب.",
+      },
+    },
+    {
+      key: "goals",
+      order: 2,
+      titleAr: "الأهداف الصحية",
+      titleEn: "Health Goals",
+      kind: "OBJECTIVES_LIST",
+      configJson: {
+        itemLabel: "هدف صحي",
+        placeholder: "مثال: الوقاية من الأمراض المعدية، تعزيز السلامة الغذائية…",
+      },
+    },
+    {
+      key: "programs",
+      order: 3,
+      titleAr: "البرامج والفعاليات الصحية",
+      titleEn: "Health Programs & Events",
+      kind: "PROGRAMS_LIST",
+      configJson: { objectivesSectionKey: "goals", itemLabel: "برنامج/فعالية صحية" },
+    },
+    {
+      key: "detail_plan",
+      order: 4,
+      titleAr: "تفاصيل التنفيذ",
+      titleEn: "Execution Details",
+      kind: "DETAIL_TABLE",
+      configJson: { programsSectionKey: "programs" },
+    },
+    {
+      key: "program_weeks",
+      order: 5,
+      titleAr: "ربط البرامج بأسابيع الخطة الفصلية",
+      titleEn: "Link Programs to Quarterly Plan Weeks",
+      kind: "PROGRAM_WEEK_TAGS",
+      configJson: { programsSectionKey: "programs", weeksCount: 14 },
+    },
+  ] as const;
+
+  await seedSections(healthGuidanceTemplate.id, HEALTH_GUIDANCE_SECTIONS);
+  console.log(
+    `تمت زراعة نوع الخطة "health_guidance" وقالبه (${HEALTH_GUIDANCE_SECTIONS.length} أقسام).`
   );
 
   // خطة التقويم الذاتي — الدليل يشترط صراحةً أربعة عناصر: أهداف عملية
@@ -521,6 +613,61 @@ async function main() {
   console.log(
     `تمت زراعة نوع الخطة "improvement_plan" وقالبه (${IMPROVEMENT_PLAN_SECTIONS.length} أقسام).`
   );
+
+  // الخطة الفصلية — خطة "مُشتقة" لا مُدخَلة: قسمها الوحيد (COMBINED_CALENDAR)
+  // يجمع تلقائيًا برامج خطتي التوجيه الطالبي والإرشاد الصحي (صف "الفعاليات")
+  // وبرامج خطة النشاط الطلابي (صف "الأنشطة الطلابية") لنفس المدرسة والعام
+  // الدراسي، بحسب وسم كل برنامج بأسبوعه في قسم "ربط البرامج بأسابيع الخطة
+  // الفصلية" داخل تلك الخطط الثلاث — مع صف "القيم" وحده يُدخَل يدويًا هنا
+  // (لا خطة مصدر له). التلوين في الجدول والتصدير يطابق نموذج مدرسي فعلي
+  // رُوجِع عند البناء (أزرق=توجيه وإرشاد، أسود=نشاط، بنفسجي=إرشاد صحي).
+  const quarterlyType = await prisma.planType.upsert({
+    where: { key: "quarterly" },
+    update: { nameAr: "الخطة الفصلية", nameEn: "Quarterly Activities & Events Plan" },
+    create: {
+      key: "quarterly",
+      nameAr: "الخطة الفصلية",
+      nameEn: "Quarterly Activities & Events Plan",
+      isCustom: false,
+    },
+  });
+
+  const quarterlyTemplate = await prisma.planTemplate.upsert({
+    where: { planTypeId_version: { planTypeId: quarterlyType.id, version: 1 } },
+    update: { isActive: true },
+    create: { planTypeId: quarterlyType.id, version: 1, isActive: true },
+  });
+
+  const QUARTERLY_SECTIONS: readonly SectionSeed[] = [
+    {
+      key: "calendar",
+      order: 1,
+      titleAr: "الجدول الفصلي للأحداث والأنشطة",
+      titleEn: "Quarterly Events & Activities Calendar",
+      kind: "COMBINED_CALENDAR",
+      configJson: {
+        weeksCount: 14,
+        rows: [
+          {
+            key: "activities_events",
+            titleAr: "الفعاليات",
+            sources: [
+              { planTypeKey: "student_guidance", label: "التوجيه والإرشاد", color: "#2563eb" },
+              { planTypeKey: "health_guidance", label: "الإرشاد الصحي", color: "#7c3aed" },
+            ],
+          },
+          {
+            key: "student_activities",
+            titleAr: "الأنشطة الطلابية",
+            sources: [{ planTypeKey: "student_activity", label: "النشاط", color: "#111827" }],
+          },
+        ],
+      },
+    },
+  ] as const;
+
+  await seedSections(quarterlyTemplate.id, QUARTERLY_SECTIONS);
+  console.log(`تمت زراعة نوع الخطة "quarterly" وقالبه (${QUARTERLY_SECTIONS.length} أقسام).`);
 
   await prisma.$disconnect();
 }

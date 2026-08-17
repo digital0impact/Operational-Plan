@@ -363,3 +363,54 @@ export async function saveWeeklyGridSectionAction(
   await markSectionComplete(planId, sectionKey, ctx.sections.length);
   redirectToNextSection(ctx);
 }
+
+/**
+ * PROGRAM_WEEK_TAGS — يربط كل برنامج بأسبوع أو أكثر من أسابيع "الخطة
+ * الفصلية" (استبدال كامل لأسابيع كل برنامج في كل حفظة، لا إضافة تراكمية).
+ */
+export async function saveProgramWeekTagsSectionAction(
+  planId: string,
+  sectionKey: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const schoolId = await requireSchoolId();
+  const ctx = await requireSectionContext(schoolId, planId, sectionKey);
+
+  const programsSectionKey = sectionConfigString(ctx.section.configJson, "programsSectionKey");
+  if (!programsSectionKey) {
+    return { error: "إعداد القسم غير مكتمل — لا يوجد قسم برامج مصدر" };
+  }
+  const programsSection = ctx.sections.find((s) => s.key === programsSectionKey);
+  const objectivesSectionKey = sectionConfigString(
+    programsSection?.configJson,
+    "objectivesSectionKey"
+  );
+  if (!objectivesSectionKey) {
+    return { error: "إعداد القسم غير مكتمل — تعذّر تحديد الأهداف المصدر" };
+  }
+
+  const programs = await prisma.planProgram.findMany({
+    where: { objective: { planId, sectionKey: objectivesSectionKey } },
+    select: { id: true },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    for (const p of programs) {
+      const weeks = formData
+        .getAll(`weeks_${p.id}`)
+        .map((v) => Number(v))
+        .filter((n) => Number.isInteger(n) && n > 0);
+
+      await tx.planProgramWeekTag.deleteMany({ where: { programId: p.id } });
+      if (weeks.length > 0) {
+        await tx.planProgramWeekTag.createMany({
+          data: weeks.map((weekOrder) => ({ programId: p.id, weekOrder })),
+        });
+      }
+    }
+  });
+
+  await markSectionComplete(planId, sectionKey, ctx.sections.length);
+  redirectToNextSection(ctx);
+}
