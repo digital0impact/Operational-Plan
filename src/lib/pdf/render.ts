@@ -123,7 +123,7 @@ export async function renderSchoolPlanPdf(schoolId: string): Promise<Buffer> {
 }
 
 /** تصدير PDF لخطة على المعمار العام (النشاط الطلابي، رعاية الموهوبين،
- * التوجيه الطالبي، التقويم الذاتي، التحسين والتطوير…) — يُعيد null إن لم
+ * التوجيه الطلابي، التقويم الذاتي، التحسين والتطوير…) — يُعيد null إن لم
  * توجد الخطة أو لم تكن ملكًا لهذه المدرسة (تحقّق الملكية في getPlanExportData). */
 export async function renderGenericPlanPdf(
   schoolId: string,

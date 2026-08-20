@@ -161,7 +161,7 @@ export default async function PlanSectionPage({
           <div className="border-t border-border pt-6">
             <p className="mb-4 text-sm text-muted">
               الصفّان أعلاه يُشتقّان تلقائيًا من الأسابيع المربوطة ببرامج خطط
-              التوجيه الطالبي والإرشاد الصحي والنشاط الطلابي — لا تُدخَل هنا.
+              التوجيه الطلابي والإرشاد الصحي والنشاط الطلابي — لا تُدخَل هنا.
               أضف أدناه صف &quot;القيم&quot; (لا خطة مصدر له) وسمِّ الأسابيع إن رغبت.
             </p>
             <WeeklyActivityGridSection
