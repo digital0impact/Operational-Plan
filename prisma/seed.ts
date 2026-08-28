@@ -5,6 +5,10 @@ import { hashPassword } from "../src/lib/password";
 
 // الأهداف الاستراتيجية العشرة لوزارة التعليم — كما وردت حرفيًا في
 // "دليل إجراءات عمل مدارس التعليم العام 2025م" (إعداد الخطة التشغيلية، صفحة 3)
+const OPERATIONAL_PLAN_TYPE_KEY = "SCHOOL_OPERATIONAL" as const;
+const OPERATIONAL_TEMPLATE_KEY = "OFFICIAL_OPERATIONAL_1447_1448";
+const CURRENT_ACADEMIC_YEAR = "1447-1448";
+
 const STRATEGIC_GOALS = [
   "ضمان وصول التعليم للجميع",
   "تطوير بيئة مدرسية آمنة وابتكارية",
@@ -30,6 +34,57 @@ async function main() {
     });
   }
   console.log(`تمت زراعة ${STRATEGIC_GOALS.length} أهداف استراتيجية.`);
+
+  const operationalPlanType = await prisma.planType.upsert({
+    where: { key: OPERATIONAL_PLAN_TYPE_KEY },
+    update: {
+      nameAr: "الخطة التشغيلية المدرسية",
+      nameEn: "School Operational Plan",
+      description:
+        "نوع الخطة التشغيلية المدرسية الحالي؛ يبقى مستقلًا عن جداول الخطة التشغيلية القائمة في مرحلة التأسيس.",
+      isSystem: true,
+      isActive: true,
+    },
+    create: {
+      key: OPERATIONAL_PLAN_TYPE_KEY,
+      nameAr: "الخطة التشغيلية المدرسية",
+      nameEn: "School Operational Plan",
+      description:
+        "نوع الخطة التشغيلية المدرسية الحالي؛ يبقى مستقلًا عن جداول الخطة التشغيلية القائمة في مرحلة التأسيس.",
+      isSystem: true,
+      isActive: true,
+    },
+  });
+
+  await prisma.planTemplate.upsert({
+    where: { key: OPERATIONAL_TEMPLATE_KEY },
+    update: {
+      planTypeId: operationalPlanType.id,
+      version: CURRENT_ACADEMIC_YEAR,
+      nameAr: "القالب الرسمي للخطة التشغيلية 1447-1448هـ",
+      nameEn: "Official Operational Plan 1447-1448 Template",
+      description:
+        "بيانات وصفية فقط لقالب المعالج التشغيلي الحالي المكوّن من 25 خطوة؛ لا يستبدل تنفيذ المعالج الحالي في هذه المرحلة.",
+      schemaJson: {
+        wizard: { type: "existing_operational_wizard", totalSteps: 25, metadataOnly: true },
+      },
+      isPublished: true,
+    },
+    create: {
+      planTypeId: operationalPlanType.id,
+      key: OPERATIONAL_TEMPLATE_KEY,
+      version: CURRENT_ACADEMIC_YEAR,
+      nameAr: "القالب الرسمي للخطة التشغيلية 1447-1448هـ",
+      nameEn: "Official Operational Plan 1447-1448 Template",
+      description:
+        "بيانات وصفية فقط لقالب المعالج التشغيلي الحالي المكوّن من 25 خطوة؛ لا يستبدل تنفيذ المعالج الحالي في هذه المرحلة.",
+      schemaJson: {
+        wizard: { type: "existing_operational_wizard", totalSteps: 25, metadataOnly: true },
+      },
+      isPublished: true,
+    },
+  });
+  console.log("تمت زراعة نوع وقالب الخطة التشغيلية المدرسية.");
 
   // رمز تفعيل تجريبي لاختبار التسجيل محليًا
   const demoCode = "SCH-DEMO-0001";

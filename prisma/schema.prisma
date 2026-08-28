@@ -18,6 +18,112 @@ datasource db {
   provider = "postgresql"
 }
 
+/// أنواع الخطط المدرسية التي تدعمها المنصة تدريجيًا.
+enum PlanTypeKey {
+  SCHOOL_OPERATIONAL
+  STUDENT_ACTIVITIES
+  COUNSELING
+  SCHOOL_BROADCAST
+  HEALTH
+  SAFETY
+  PROFESSIONAL_DEVELOPMENT
+  GIFTED
+  LEARNING_SUPPORT
+}
+
+/// حالة الخطة المدرسية على مستوى طبقة التوافق الجديدة.
+enum PlanStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+/// نوع خطة مدرسية — تُزرع الأنواع النظامية تدريجيًا حسب مراحل المنتج.
+model PlanType {
+  id          String      @id @default(cuid())
+  key         PlanTypeKey @unique
+  nameAr      String
+  nameEn      String
+  description String?
+  isSystem    Boolean     @default(true)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  plans     Plan[]
+  templates PlanTemplate[]
+
+  @@map("plan_types")
+}
+
+/// قالب خطة مدرسية — في هذه المرحلة هو بيانات وصفية لقالب المعالج التشغيلي الحالي فقط.
+model PlanTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  version     String
+  nameAr      String
+  nameEn      String
+  description String?
+  schemaJson  Json
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  planTypeId String
+  planType   PlanType @relation(fields: [planTypeId], references: [id], onDelete: Restrict)
+
+  plans Plan[]
+
+  @@unique([planTypeId, key])
+  @@map("plan_templates")
+}
+
+/// خطة مدرسية — طبقة توافق مستقلة فوق بيانات الخطة التشغيلية الحالية دون نقلها.
+model Plan {
+  id              String     @id @default(cuid())
+  academicYear    String
+  title           String
+  status          PlanStatus @default(DRAFT)
+  currentStep     Int        @default(1)
+  progressPercent Int        @default(0)
+  shareToken      String?    @unique
+  voteToken       String?    @unique
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  completedAt     DateTime?
+
+  schoolId   String
+  school     School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  planTypeId String
+  planType   PlanType     @relation(fields: [planTypeId], references: [id], onDelete: Restrict)
+  templateId String
+  template   PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  stepProgress PlanStepProgress[]
+
+  @@unique([schoolId, planTypeId])
+  @@map("plans")
+}
+
+/// تتبع إتمام خطوات الخطة على مستوى طبقة الخطط الجديدة.
+model PlanStepProgress {
+  id          String   @id @default(cuid())
+  step        Int
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  completedByUserId String?
+  completedByUser   User?   @relation(fields: [completedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([planId, step])
+  @@map("plan_step_progress")
+}
+
 /// مدرسة (Tenant) — تُنشأ عبر رمز تفعيل صادر من الإدارة العامة للتعليم
 model School {
   id String @id @default(cuid())
@@ -109,7 +215,8 @@ model User {
   schoolId String?
   school   School? @relation(fields: [schoolId], references: [id])
 
-  sessions Session[]
+  sessions          Session[]
+  planStepProgress PlanStepProgress[]
 
   @@map("users")
 }
