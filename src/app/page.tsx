@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "منصة تخطيط — منصة خطط مدارس التعليم العام",
+  title: "التخطيط الذكي — منصة خطط مدارس التعليم العام",
   description:
     "أعدّ كل خطط مدرستك — التشغيلية والنشاط الطلابي ورعاية الموهوبين والتوجيه الطلابي والإرشاد الصحي وغيرها — في منصة واحدة، وفق دليل إجراءات عمل مدارس التعليم العام.",
 };
@@ -101,7 +101,7 @@ export default async function Home() {
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-lg text-accent-ink">
               🏫
             </span>
-            <span className="text-base font-extrabold text-ink">منصة تخطيط</span>
+            <span className="text-base font-extrabold text-ink">التخطيط الذكي</span>
           </div>
           <div className="flex items-center gap-2">
             <Link
@@ -175,7 +175,7 @@ export default async function Home() {
         <section className="border-y border-border bg-surface-2 py-14">
           <div className="mx-auto max-w-5xl px-4">
             <h2 className="text-center text-2xl font-extrabold text-ink">
-              لماذا منصة تخطيط
+              لماذا التخطيط الذكي
             </h2>
             <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURES.map((f) => (
@@ -214,7 +214,7 @@ export default async function Home() {
       </main>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted">
-        © 2026 منصة تخطيط. جميع الحقوق محفوظة
+        © 2026 التخطيط الذكي. جميع الحقوق محفوظة
       </footer>
     </div>
   );

@@ -18,7 +18,7 @@ export function PublicShell({
           </span>
           <div>
             <p className="text-sm font-bold text-ink">{schoolName}</p>
-            <p className="text-xs text-muted">منصة تخطيط</p>
+            <p className="text-xs text-muted">التخطيط الذكي</p>
           </div>
         </div>
       </header>
@@ -32,7 +32,7 @@ export function PublicShell({
       </main>
 
       <footer className="py-8 text-center text-xs text-muted">
-        منصة تخطيط — رابط عام لا يتطلب تسجيل دخول
+        التخطيط الذكي — رابط عام لا يتطلب تسجيل دخول
       </footer>
     </div>
   );

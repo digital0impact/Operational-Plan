@@ -16,7 +16,7 @@ export function AuthShell({
           </div>
           <div>
             <h1 className="text-xl font-extrabold text-ink">
-              منصة تخطيط
+              التخطيط الذكي
             </h1>
             <p className="mt-1 text-sm text-muted">بوابة الدخول الموحدة</p>
           </div>
@@ -28,7 +28,7 @@ export function AuthShell({
         </div>
 
         <p className="mt-6 text-center text-xs text-muted">
-          © 2026 منصة تخطيط. جميع الحقوق محفوظة
+          © 2026 التخطيط الذكي. جميع الحقوق محفوظة
         </p>
       </div>
     </div>

@@ -400,7 +400,7 @@ function coverSection(
     </div>
 
     <p class="cover-footer">
-      أُنشئت هذه الوثيقة آليًا عبر منصة تخطيط بتاريخ
+      أُنشئت هذه الوثيقة آليًا عبر التخطيط الذكي بتاريخ
       ${new Intl.DateTimeFormat("ar", { dateStyle: "long" }).format(generatedAt)}
     </p>
   </section>`;
@@ -453,7 +453,7 @@ export function buildSectionOnlyHtml(data: SectionExportData): string {
 
   <div class="banner">
     <span>${esc(data.schoolName)} · العام الدراسي ${esc(data.academicYear)} ·
-      أُنشئت آليًا عبر منصة تخطيط بتاريخ
+      أُنشئت آليًا عبر التخطيط الذكي بتاريخ
       ${new Intl.DateTimeFormat("ar", { dateStyle: "long" }).format(data.generatedAt)}</span>
     <b>${esc(data.planTypeName)}</b>
   </div>

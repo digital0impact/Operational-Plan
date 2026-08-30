@@ -20,7 +20,7 @@ export function TopBar({
               🏫
             </span>
             <span className="hidden text-sm font-bold text-ink sm:block">
-              منصة تخطيط
+              التخطيط الذكي
             </span>
           </Link>
           <nav className="hidden items-center gap-4 text-sm sm:flex">
