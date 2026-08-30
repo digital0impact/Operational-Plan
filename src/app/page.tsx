@@ -87,6 +87,32 @@ const FEATURES = [
   },
 ];
 
+const PRICING_PLANS = [
+  {
+    name: "نصف سنوي",
+    price: "249",
+    period: "لكل مدرسة / 6 أشهر",
+    features: [
+      "جميع أنواع الخطط الثماني",
+      "تصدير PDF لكل خطة أو أي قسم بمفرده",
+      "اقتراحات بالذكاء الاصطناعي",
+      "روابط عامة للتصويت والتقييم والزيارات الصفية",
+    ],
+    highlight: false,
+  },
+  {
+    name: "سنوي",
+    price: "499",
+    period: "لكل مدرسة / 12 شهرًا",
+    features: [
+      "كل مزايا الاشتراك النصف سنوي",
+      "تغطية عام دراسي كامل بلا تجديد نصف سنوي",
+      "أولوية الدعم الفني",
+    ],
+    highlight: true,
+  },
+];
+
 export default async function Home() {
   const user = await getCurrentUser();
   if (user) {
@@ -104,6 +130,12 @@ export default async function Home() {
             <span className="text-base font-extrabold text-ink">التخطيط الذكي</span>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="#pricing"
+              className="hidden rounded-lg px-3.5 py-2 text-sm font-semibold text-ink transition hover:text-accent sm:inline-block"
+            >
+              الأسعار
+            </Link>
             <Link
               href="/login"
               className="rounded-lg px-3.5 py-2 text-sm font-semibold text-ink transition hover:text-accent"
@@ -193,6 +225,55 @@ export default async function Home() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section id="pricing" className="mx-auto max-w-5xl px-4 py-16">
+          <div className="text-center">
+            <h2 className="text-2xl font-extrabold text-ink">خطط الاشتراك</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+              اشتراك واحد لكل مدرسة، يشمل كل أنواع الخطط والمزايا — اختر المدة
+              التي تناسبك
+            </p>
+          </div>
+          <div className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
+            {PRICING_PLANS.map((plan) => (
+              <div
+                key={plan.name}
+                className={`relative rounded-2xl border p-6 ${
+                  plan.highlight
+                    ? "border-accent bg-surface shadow-sm"
+                    : "border-border bg-surface"
+                }`}
+              >
+                {plan.highlight && (
+                  <span className="absolute -top-3 right-6 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-ink">
+                    الأكثر شمولًا
+                  </span>
+                )}
+                <h3 className="text-sm font-bold text-ink">{plan.name}</h3>
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <span className="text-3xl font-extrabold text-ink">
+                    {plan.price}
+                  </span>
+                  <span className="text-sm font-semibold text-muted">ريال</span>
+                </div>
+                <p className="mt-1 text-xs text-muted">{plan.period}</p>
+                <ul className="mt-5 flex flex-col gap-2.5">
+                  {plan.features.map((f) => (
+                    <li
+                      key={f}
+                      className="flex items-start gap-2 text-xs leading-relaxed text-ink"
+                    >
+                      <span className="mt-0.5 text-accent" aria-hidden="true">
+                        ✓
+                      </span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </section>
 
