@@ -25,13 +25,26 @@ enum SubscriptionTier {
   PAID
 }
 
+/// نطاق الاشتراك المدفوع: شامل لكل أنواع الخطط، أو مقتصر على نوع خطة واحد
+/// (subscriptionPlanTypeId يُحدَّد فقط في حالة SINGLE_PLAN)
+enum SubscriptionScope {
+  ALL
+  SINGLE_PLAN
+}
+
 /// مدرسة (Tenant) — تُنشأ بتسجيل حر، وتُرقَّى إلى خطة مدفوعة عبر رمز اشتراك
 model School {
   id String @id @default(cuid())
 
   // الاشتراك
-  subscriptionTier      SubscriptionTier @default(FREE)
+  subscriptionTier      SubscriptionTier  @default(FREE)
+  subscriptionScope     SubscriptionScope? // null على الخطة المجانية
   subscriptionExpiresAt DateTime? // null على الخطة المجانية أو خطة مدفوعة بلا انتهاء
+
+  subscriptionPlanTypeId String? // مضبوط فقط حين subscriptionScope = SINGLE_PLAN
+  subscriptionPlanType   PlanType? @relation("SchoolSubscriptionPlanType", fields: [subscriptionPlanTypeId], references: [id])
+
+  teamInvites TeamInvite[]
 
   // بيانات المدرسة (النموذج الرسمي، صفحة 2)
   name                 String
@@ -96,6 +109,7 @@ model WizardStepProgress {
 /// رمز اشتراك (SCH-XXXX-XXXX) يُصدره المشرف العام عند شراء مدرسة اشتراكًا
 /// (عبر المتجر الخارجي)، وتُدخله المدرسة من صفحة الاشتراك لترقية حسابها
 /// إلى خطة مدفوعة لمدة durationMonths. لا علاقة له بالتسجيل — التسجيل حر.
+/// planTypeId = null → رمز شامل لكل أنواع الخطط؛ محدَّد → رمز خطة واحدة.
 model ActivationCode {
   id             String    @id @default(cuid())
   code           String    @unique
@@ -108,7 +122,28 @@ model ActivationCode {
   schoolId String? // بلا @unique: قد تُرقّي المدرسة اشتراكها أكثر من مرة عبر الزمن
   school   School? @relation(fields: [schoolId], references: [id])
 
+  planTypeId String? // null = رمز شامل؛ محدَّد = رمز خطة واحدة بعينها
+  planType   PlanType? @relation("ActivationCodePlanType", fields: [planTypeId], references: [id])
+
   @@map("activation_codes")
+}
+
+/// دعوة انضمام عضو فريق لمدرسة (متاح فقط للمدارس على الاشتراك الشامل، حتى
+/// 4 حسابات للمدرسة الواحدة) — مدير المدرسة يُدخل بريد المدعو، فيُنشأ رابط
+/// دعوة (لا يُرسَل بريد فعليًا، المدير ينسخه ويرسله بنفسه). acceptedAt يُحدَّد
+/// عند قبول الدعوة، وحينها فقط يُنشأ حساب User فعلي.
+model TeamInvite {
+  id         String    @id @default(cuid())
+  email      String
+  token      String    @unique
+  createdAt  DateTime  @default(now())
+  acceptedAt DateTime?
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, email])
+  @@map("team_invites")
 }
 
 /// مستخدم (مدير مدرسة أو عضو فريق تميز)
@@ -326,6 +361,9 @@ model PlanType {
   createdAt DateTime @default(now())
 
   templates PlanTemplate[]
+
+  subscribedSchools School[]         @relation("SchoolSubscriptionPlanType")
+  activationCodes   ActivationCode[] @relation("ActivationCodePlanType")
 
   @@map("plan_types")
 }

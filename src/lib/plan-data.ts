@@ -82,6 +82,7 @@ export async function getSchoolPlans(schoolId: string) {
       id: plan.id,
       academicYear: plan.academicYear,
       status: plan.status,
+      planTypeId: plan.template.planType.id,
       planTypeName: plan.template.planType.nameAr,
       totalSections,
       completedSections,

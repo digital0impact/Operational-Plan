@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCompletedSteps } from "@/lib/wizard-data";
 import { getEvaluationSummary } from "@/lib/public-data";
 import { getSchoolPlans } from "@/lib/plan-data";
-import { isPaidPlan } from "@/lib/subscription";
+import { canAccessPlanType, getPlanTypeIdByKey } from "@/lib/subscription";
 import { CopyLink } from "@/components/copy-link";
 import {
   TOTAL_WIZARD_STEPS,
@@ -21,21 +21,25 @@ export const metadata: Metadata = { title: "الرئيسية" };
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   const school = user!.school!;
-  const paid = isPaidPlan(school);
 
-  const [completedSteps, totalVotes, evaluations, evalSummary, otherPlans] = await Promise.all([
-    getCompletedSteps(school.id),
-    prisma.vote.count({
-      where: { initiative: { operationalGoal: { schoolId: school.id } } },
-    }),
-    prisma.evaluation.findMany({
-      where: { schoolId: school.id },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    }),
-    getEvaluationSummary(school.id),
-    getSchoolPlans(school.id),
-  ]);
+  const [completedSteps, totalVotes, evaluations, evalSummary, otherPlans, operationalPlanTypeId] =
+    await Promise.all([
+      getCompletedSteps(school.id),
+      prisma.vote.count({
+        where: { initiative: { operationalGoal: { schoolId: school.id } } },
+      }),
+      prisma.evaluation.findMany({
+        where: { schoolId: school.id },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      getEvaluationSummary(school.id),
+      getSchoolPlans(school.id),
+      getPlanTypeIdByKey("operational"),
+    ]);
+  const operationalPaid = operationalPlanTypeId
+    ? canAccessPlanType(school, operationalPlanTypeId)
+    : false;
   const completedCount = completedSteps.size;
   const progressPercent = Math.round((completedCount / TOTAL_WIZARD_STEPS) * 100);
   const isPlanComplete = completedCount >= TOTAL_WIZARD_STEPS;
@@ -122,7 +126,7 @@ export default async function DashboardPage() {
                 تحرير
               </Link>
               {completedCount > 0 ? (
-                paid ? (
+                operationalPaid ? (
                   <a
                     href="/export"
                     className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
@@ -186,7 +190,7 @@ export default async function DashboardPage() {
                   </Link>
                 ) : null}
                 {plan.completedSections > 0 ? (
-                  paid ? (
+                  canAccessPlanType(school, plan.planTypeId) ? (
                     <a
                       href={`/plans/${plan.id}/export`}
                       className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
@@ -222,7 +226,7 @@ export default async function DashboardPage() {
             شارك هذه الروابط مع المعلمين لتصويتهم على المبادرات والبرامج، ومع
             المشرف التربوي أو أولياء الأمور للاطلاع على الخطة وتقييمها.
           </p>
-          {paid ? (
+          {operationalPaid ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <CopyLink path={`/vote/${school.voteToken}`} label={`رابط التصويت (${totalVotes} صوت)`} />
               <CopyLink path={`/share/${school.shareToken}`} label="رابط المشاركة والتقييم" />
@@ -230,13 +234,14 @@ export default async function DashboardPage() {
           ) : (
             <div className="mt-4 rounded-lg border border-dashed border-border bg-surface-2 p-4 text-center">
               <p className="text-sm text-ink">
-                🔒 الروابط العامة متاحة فقط في الخطط المدفوعة
+                🔒 روابط الخطة التشغيلية العامة تتطلب اشتراكًا شاملًا أو
+                اشتراكًا يشمل الخطة التشغيلية تحديدًا
               </p>
               <Link
                 href="/subscription"
                 className="mt-2 inline-block text-sm font-semibold text-accent hover:underline"
               >
-                الترقية إلى خطة مدفوعة ←
+                الترقية من صفحة الاشتراك ←
               </Link>
             </div>
           )}

@@ -87,29 +87,63 @@ const FEATURES = [
   },
 ];
 
-const PRICING_PLANS = [
+const PRICING_GROUPS = [
   {
-    name: "نصف سنوي",
-    price: "249",
-    period: "لكل مدرسة / 6 أشهر",
-    features: [
-      "جميع أنواع الخطط الثماني",
-      "تصدير PDF لكل خطة أو أي قسم بمفرده",
-      "اقتراحات بالذكاء الاصطناعي",
-      "روابط عامة للتصويت والتقييم والزيارات الصفية",
+    title: "الاشتراك الشامل",
+    subtitle: "كل أنواع الخطط الثماني، حتى 4 حسابات للمدرسة الواحدة",
+    plans: [
+      {
+        name: "نصف سنوي",
+        price: "249",
+        period: "لكل مدرسة / 6 أشهر",
+        features: [
+          "جميع أنواع الخطط الثماني",
+          "تصدير PDF لكل خطة أو أي قسم بمفرده",
+          "اقتراحات بالذكاء الاصطناعي",
+          "روابط عامة للتصويت والتقييم والزيارات الصفية",
+          "حتى 4 حسابات للمدرسة الواحدة",
+        ],
+        highlight: false,
+      },
+      {
+        name: "سنوي",
+        price: "499",
+        period: "لكل مدرسة / 12 شهرًا",
+        features: [
+          "كل مزايا الاشتراك النصف سنوي",
+          "تغطية عام دراسي كامل بلا تجديد نصف سنوي",
+          "أولوية الدعم الفني",
+        ],
+        highlight: true,
+      },
     ],
-    highlight: false,
   },
   {
-    name: "سنوي",
-    price: "499",
-    period: "لكل مدرسة / 12 شهرًا",
-    features: [
-      "كل مزايا الاشتراك النصف سنوي",
-      "تغطية عام دراسي كامل بلا تجديد نصف سنوي",
-      "أولوية الدعم الفني",
+    title: "اشتراك خطة واحدة",
+    subtitle: "نوع خطة واحد تختاره، بحساب واحد فقط",
+    plans: [
+      {
+        name: "نصف سنوي",
+        price: "99",
+        period: "لخطة واحدة / 6 أشهر",
+        features: [
+          "خطة واحدة تختارها عند الشراء",
+          "تصدير PDF للخطة المشترَك بها",
+          "اقتراحات بالذكاء الاصطناعي لنفس الخطة",
+        ],
+        highlight: false,
+      },
+      {
+        name: "سنوي",
+        price: "199",
+        period: "لخطة واحدة / 12 شهرًا",
+        features: [
+          "كل مزايا الاشتراك النصف سنوي",
+          "تغطية عام دراسي كامل بلا تجديد نصف سنوي",
+        ],
+        highlight: false,
+      },
     ],
-    highlight: true,
   },
 ];
 
@@ -232,46 +266,57 @@ export default async function Home() {
           <div className="text-center">
             <h2 className="text-2xl font-extrabold text-ink">خطط الاشتراك</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-              اشتراك واحد لكل مدرسة، يشمل كل أنواع الخطط والمزايا — اختر المدة
-              التي تناسبك
+              اشترك بكل أنواع الخطط لمدرستك، أو بخطة واحدة فقط تحتاجها —
+              اختر ما يناسبك
             </p>
           </div>
-          <div className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
-            {PRICING_PLANS.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative rounded-2xl border p-6 ${
-                  plan.highlight
-                    ? "border-accent bg-surface shadow-sm"
-                    : "border-border bg-surface"
-                }`}
-              >
-                {plan.highlight && (
-                  <span className="absolute -top-3 right-6 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-ink">
-                    الأكثر شمولًا
-                  </span>
-                )}
-                <h3 className="text-sm font-bold text-ink">{plan.name}</h3>
-                <div className="mt-3 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-extrabold text-ink">
-                    {plan.price}
-                  </span>
-                  <span className="text-sm font-semibold text-muted">ريال</span>
+
+          <div className="mt-10 flex flex-col gap-12">
+            {PRICING_GROUPS.map((group) => (
+              <div key={group.title}>
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-ink">{group.title}</h3>
+                  <p className="mt-1 text-sm text-muted">{group.subtitle}</p>
                 </div>
-                <p className="mt-1 text-xs text-muted">{plan.period}</p>
-                <ul className="mt-5 flex flex-col gap-2.5">
-                  {plan.features.map((f) => (
-                    <li
-                      key={f}
-                      className="flex items-start gap-2 text-xs leading-relaxed text-ink"
+                <div className="mx-auto mt-6 grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
+                  {group.plans.map((plan) => (
+                    <div
+                      key={plan.name}
+                      className={`relative rounded-2xl border p-6 ${
+                        plan.highlight
+                          ? "border-accent bg-surface shadow-sm"
+                          : "border-border bg-surface"
+                      }`}
                     >
-                      <span className="mt-0.5 text-accent" aria-hidden="true">
-                        ✓
-                      </span>
-                      <span>{f}</span>
-                    </li>
+                      {plan.highlight && (
+                        <span className="absolute -top-3 right-6 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-ink">
+                          الأكثر توفيرًا
+                        </span>
+                      )}
+                      <h4 className="text-sm font-bold text-ink">{plan.name}</h4>
+                      <div className="mt-3 flex items-baseline gap-1.5">
+                        <span className="text-3xl font-extrabold text-ink">
+                          {plan.price}
+                        </span>
+                        <span className="text-sm font-semibold text-muted">ريال</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted">{plan.period}</p>
+                      <ul className="mt-5 flex flex-col gap-2.5">
+                        {plan.features.map((f) => (
+                          <li
+                            key={f}
+                            className="flex items-start gap-2 text-xs leading-relaxed text-ink"
+                          >
+                            <span className="mt-0.5 text-accent" aria-hidden="true">
+                              ✓
+                            </span>
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             ))}
           </div>

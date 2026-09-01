@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSchoolByShareToken } from "@/lib/public-data";
-import { isPaidPlan } from "@/lib/subscription";
+import { canAccessPlanType, getPlanTypeIdByKey } from "@/lib/subscription";
 import { renderSchoolPlanPdf } from "@/lib/pdf/render";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,8 @@ export async function GET(
   if (!school) {
     return new NextResponse("رابط غير صالح", { status: 404 });
   }
-  if (!isPaidPlan(school)) {
+  const operationalPlanTypeId = await getPlanTypeIdByKey("operational");
+  if (!operationalPlanTypeId || !canAccessPlanType(school, operationalPlanTypeId)) {
     return new NextResponse("تحميل الخطة كملف PDF غير متاح لهذه المدرسة حاليًا.", {
       status: 402,
     });

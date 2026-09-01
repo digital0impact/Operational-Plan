@@ -6,10 +6,18 @@ import { GenerateCodesForm } from "@/components/admin/generate-codes-form";
 export const metadata: Metadata = { title: "رموز التفعيل" };
 
 export default async function AdminCodesPage() {
-  const codes = await prisma.activationCode.findMany({
-    include: { school: { select: { name: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const [codes, planTypes] = await Promise.all([
+    prisma.activationCode.findMany({
+      include: { school: { select: { name: true } }, planType: { select: { nameAr: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    // الخطة الفصلية مُشتقّة من خطط أخرى ولا معنى للاشتراك بها وحدها
+    prisma.planType.findMany({
+      where: { key: { not: "quarterly" } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, nameAr: true },
+    }),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,7 +31,7 @@ export default async function AdminCodesPage() {
 
       <section className="rounded-2xl border border-border bg-surface p-6">
         <h2 className="mb-4 text-base font-bold text-ink">إصدار رموز جديدة</h2>
-        <GenerateCodesForm />
+        <GenerateCodesForm planTypes={planTypes} />
       </section>
 
       <section className="rounded-2xl border border-border bg-surface p-6">
@@ -39,6 +47,7 @@ export default async function AdminCodesPage() {
               <thead>
                 <tr className="border-b border-border text-right text-xs text-muted">
                   <th className="py-2 pl-2">الرمز</th>
+                  <th className="py-2 pl-2">النطاق</th>
                   <th className="py-2 pl-2">المدة</th>
                   <th className="py-2 pl-2">الحالة</th>
                   <th className="py-2 pl-2">ملاحظة</th>
@@ -52,6 +61,9 @@ export default async function AdminCodesPage() {
                   <tr key={code.id} className="border-b border-border last:border-0">
                     <td className="py-2.5 pl-2 font-mono text-xs text-ink" dir="ltr">
                       {code.code}
+                    </td>
+                    <td className="py-2.5 pl-2 text-ink">
+                      {code.planType ? code.planType.nameAr : "شامل (كل الخطط)"}
                     </td>
                     <td className="py-2.5 pl-2 text-muted">
                       {code.durationMonths === 6 ? "نصف سنوي" : `${code.durationMonths} شهرًا`}

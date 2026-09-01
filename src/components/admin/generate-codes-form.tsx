@@ -8,7 +8,11 @@ import { SubmitButton } from "@/components/submit-button";
 
 const initialState: ActionState = { error: null };
 
-export function GenerateCodesForm() {
+export function GenerateCodesForm({
+  planTypes,
+}: {
+  planTypes: { id: string; nameAr: string }[];
+}) {
   const [state, formAction] = useActionState(
     generateActivationCodesAction,
     initialState
@@ -37,6 +41,21 @@ export function GenerateCodesForm() {
         >
           <option value={6}>نصف سنوي (6 أشهر)</option>
           <option value={12}>سنوي (12 شهرًا)</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold text-ink">نطاق الرمز</span>
+        <select
+          name="planTypeId"
+          defaultValue=""
+          className="w-52 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
+        >
+          <option value="">شامل (كل أنواع الخطط)</option>
+          {planTypes.map((type) => (
+            <option key={type.id} value={type.id}>
+              خطة واحدة: {type.nameAr}
+            </option>
+          ))}
         </select>
       </label>
       <label className="flex flex-1 min-w-[200px] flex-col gap-1.5">

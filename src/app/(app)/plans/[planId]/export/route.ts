@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
-import { isPaidPlan } from "@/lib/subscription";
+import { canAccessPlanType } from "@/lib/subscription";
+import { loadPlanShell } from "@/lib/plan-data";
 import { renderGenericPlanPdf } from "@/lib/pdf/render";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +14,16 @@ export async function GET(
   if (!user?.school) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  if (!isPaidPlan(user.school)) {
+
+  const { planId } = await params;
+  const shell = await loadPlanShell(user.school.id, planId);
+  if (!shell) {
+    return NextResponse.json({ error: "الخطة غير موجودة" }, { status: 404 });
+  }
+  if (!canAccessPlanType(user.school, shell.planType.id)) {
     return NextResponse.redirect(new URL("/subscription?upgrade=export", request.url));
   }
 
-  const { planId } = await params;
   const pdf = await renderGenericPlanPdf(user.school.id, planId);
   if (!pdf) {
     return NextResponse.json({ error: "الخطة غير موجودة" }, { status: 404 });

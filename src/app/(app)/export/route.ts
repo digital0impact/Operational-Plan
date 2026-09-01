@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
-import { isPaidPlan } from "@/lib/subscription";
+import { canAccessPlanType, getPlanTypeIdByKey } from "@/lib/subscription";
 import { renderSchoolPlanPdf } from "@/lib/pdf/render";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,9 @@ export async function GET(request: Request) {
   if (!user?.school) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  if (!isPaidPlan(user.school)) {
+
+  const operationalPlanTypeId = await getPlanTypeIdByKey("operational");
+  if (!operationalPlanTypeId || !canAccessPlanType(user.school, operationalPlanTypeId)) {
     return NextResponse.redirect(new URL("/subscription?upgrade=export", request.url));
   }
 

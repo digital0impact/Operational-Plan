@@ -12,6 +12,11 @@ const generateCodesSchema = z.object({
   durationMonths: z.coerce.number().int().refine((v) => v === 6 || v === 12, {
     message: "مدة الاشتراك يجب أن تكون 6 أو 12 شهرًا",
   }),
+  planTypeId: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? v : null)),
   issuedFor: z
     .string()
     .trim()
@@ -29,6 +34,7 @@ export async function generateActivationCodesAction(
   const parsed = generateCodesSchema.safeParse({
     count: formData.get("count"),
     durationMonths: formData.get("durationMonths"),
+    planTypeId: formData.get("planTypeId"),
     issuedFor: formData.get("issuedFor"),
   });
 
@@ -36,9 +42,21 @@ export async function generateActivationCodesAction(
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
+  // الخطة الفصلية مُشتقّة من خطط أخرى — لا يجوز إصدار رمز اشتراك مقتصر عليها وحدها
+  if (parsed.data.planTypeId) {
+    const planType = await prisma.planType.findUnique({
+      where: { id: parsed.data.planTypeId },
+      select: { key: true },
+    });
+    if (!planType || planType.key === "quarterly") {
+      return { error: "نوع الخطة المحدَّد غير صالح لإصدار رمز اشتراك خطة واحدة" };
+    }
+  }
+
   const codes = Array.from({ length: parsed.data.count }, () => ({
     code: generateActivationCode(),
     durationMonths: parsed.data.durationMonths,
+    planTypeId: parsed.data.planTypeId,
     issuedFor: parsed.data.issuedFor,
   }));
 

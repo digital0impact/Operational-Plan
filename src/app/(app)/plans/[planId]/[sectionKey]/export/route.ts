@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
-import { isPaidPlan } from "@/lib/subscription";
+import { canAccessPlanType } from "@/lib/subscription";
+import { loadPlanShell } from "@/lib/plan-data";
 import { renderPlanSectionPdf } from "@/lib/pdf/render";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +14,16 @@ export async function GET(
   if (!user?.school) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  if (!isPaidPlan(user.school)) {
+
+  const { planId, sectionKey } = await params;
+  const shell = await loadPlanShell(user.school.id, planId);
+  if (!shell) {
+    return NextResponse.json({ error: "القسم غير موجود" }, { status: 404 });
+  }
+  if (!canAccessPlanType(user.school, shell.planType.id)) {
     return NextResponse.redirect(new URL("/subscription?upgrade=export", request.url));
   }
 
-  const { planId, sectionKey } = await params;
   const pdf = await renderPlanSectionPdf(user.school.id, planId, sectionKey);
   if (!pdf) {
     return NextResponse.json({ error: "القسم غير موجود" }, { status: 404 });
