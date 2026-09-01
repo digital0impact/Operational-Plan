@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
+import { isPaidPlan } from "@/lib/subscription";
 import { renderGenericPlanPdf } from "@/lib/pdf/render";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,9 @@ export async function GET(
   const user = await getCurrentUser();
   if (!user?.school) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+  if (!isPaidPlan(user.school)) {
+    return NextResponse.redirect(new URL("/subscription?upgrade=export", request.url));
   }
 
   const { planId } = await params;

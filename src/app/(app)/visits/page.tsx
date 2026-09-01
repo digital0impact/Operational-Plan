@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import { getVisitsForSchool } from "@/lib/visits-data";
+import { isPaidPlan } from "@/lib/subscription";
 import { ScheduleVisitForm } from "@/components/visits/schedule-visit-form";
 import { VisitsList } from "@/components/visits/visits-list";
 
@@ -9,6 +11,7 @@ export const metadata: Metadata = { title: "الزيارات الصفية" };
 export default async function VisitsPage() {
   const user = await getCurrentUser();
   const school = user!.school!;
+  const paid = isPaidPlan(school);
   const visits = await getVisitsForSchool(school.id);
 
   return (
@@ -23,7 +26,21 @@ export default async function VisitsPage() {
 
       <section className="rounded-2xl border border-border bg-surface p-6">
         <h2 className="mb-4 text-base font-bold text-ink">جدولة زيارة جديدة</h2>
-        <ScheduleVisitForm />
+        {paid ? (
+          <ScheduleVisitForm />
+        ) : (
+          <div className="rounded-lg border border-dashed border-border bg-surface-2 p-4 text-center">
+            <p className="text-sm text-ink">
+              🔒 جدولة الزيارات الصفية (رابط عام) متاحة فقط في الخطط المدفوعة
+            </p>
+            <Link
+              href="/subscription"
+              className="mt-2 inline-block text-sm font-semibold text-accent hover:underline"
+            >
+              الترقية إلى خطة مدفوعة ←
+            </Link>
+          </div>
+        )}
       </section>
 
       <section className="rounded-2xl border border-border bg-surface p-6">

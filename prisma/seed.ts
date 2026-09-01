@@ -31,14 +31,19 @@ async function main() {
   }
   console.log(`تمت زراعة ${STRATEGIC_GOALS.length} أهداف استراتيجية.`);
 
-  // رمز تفعيل تجريبي لاختبار التسجيل محليًا
+  // رمز اشتراك تجريبي لاختبار ترقية الاشتراك محليًا (يُدخَل من صفحة
+  // /subscription بعد تسجيل الدخول، لا عند التسجيل — التسجيل حر بلا رمز)
   const demoCode = "SCH-DEMO-0001";
   await prisma.activationCode.upsert({
     where: { code: demoCode },
     update: {},
-    create: { code: demoCode, issuedFor: "مدرسة تجريبية — للاختبار المحلي" },
+    create: {
+      code: demoCode,
+      durationMonths: 12,
+      issuedFor: "رمز اشتراك تجريبي — للاختبار المحلي",
+    },
   });
-  console.log(`رمز التفعيل التجريبي: ${demoCode}`);
+  console.log(`رمز الاشتراك التجريبي: ${demoCode}`);
 
   // حساب إدارة عامة تجريبي — لإصدار رموز التفعيل ومتابعة المدارس
   const adminEmail = "admin@moe.test";

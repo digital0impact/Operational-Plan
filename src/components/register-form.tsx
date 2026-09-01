@@ -23,15 +23,6 @@ export function RegisterForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <Field label="رمز التفعيل *" hint="احصل على رمز التفعيل من مدير النظام">
-        <TextInput
-          name="activationCode"
-          placeholder="SCH-XXXX-XXXX"
-          className="text-center font-mono uppercase tracking-widest"
-          required
-        />
-      </Field>
-
       <Field label="اسم المدرسة">
         <TextInput name="schoolName" placeholder="مدرسة…" required />
       </Field>

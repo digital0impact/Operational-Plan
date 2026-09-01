@@ -9,6 +9,9 @@ import type { ActionState } from "@/app/actions/auth";
 
 const generateCodesSchema = z.object({
   count: z.coerce.number().int().min(1).max(50),
+  durationMonths: z.coerce.number().int().refine((v) => v === 6 || v === 12, {
+    message: "مدة الاشتراك يجب أن تكون 6 أو 12 شهرًا",
+  }),
   issuedFor: z
     .string()
     .trim()
@@ -25,6 +28,7 @@ export async function generateActivationCodesAction(
 
   const parsed = generateCodesSchema.safeParse({
     count: formData.get("count"),
+    durationMonths: formData.get("durationMonths"),
     issuedFor: formData.get("issuedFor"),
   });
 
@@ -34,6 +38,7 @@ export async function generateActivationCodesAction(
 
   const codes = Array.from({ length: parsed.data.count }, () => ({
     code: generateActivationCode(),
+    durationMonths: parsed.data.durationMonths,
     issuedFor: parsed.data.issuedFor,
   }));
 

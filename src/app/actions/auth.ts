@@ -14,14 +14,8 @@ import {
 
 export type ActionState = { error: string | null };
 
-const activationCodePattern = /^SCH-[A-Z0-9]{4}-[A-Z0-9]{4}$/i;
-
 const registerSchema = z
   .object({
-    activationCode: z
-      .string()
-      .trim()
-      .regex(activationCodePattern, "صيغة رمز التفعيل غير صحيحة (SCH-XXXX-XXXX)"),
     schoolName: z.string().trim().min(3, "اسم المدرسة قصير جدًا"),
     gender: z.enum(
       SCHOOL_GENDER_OPTIONS.map((o) => o.value) as [string, ...string[]],
@@ -50,7 +44,6 @@ export async function registerSchoolAction(
   formData: FormData
 ): Promise<ActionState> {
   const parsed = registerSchema.safeParse({
-    activationCode: formData.get("activationCode"),
     schoolName: formData.get("schoolName"),
     gender: formData.get("gender"),
     classification: formData.get("classification"),
@@ -66,18 +59,6 @@ export async function registerSchoolAction(
   }
 
   const data = parsed.data;
-  const normalizedCode = data.activationCode.toUpperCase();
-
-  const activationCode = await prisma.activationCode.findUnique({
-    where: { code: normalizedCode },
-  });
-
-  if (!activationCode) {
-    return { error: "رمز التفعيل غير موجود" };
-  }
-  if (activationCode.used) {
-    return { error: "رمز التفعيل مُستخدم مسبقًا" };
-  }
 
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
@@ -98,11 +79,6 @@ export async function registerSchoolAction(
         voteToken: generatePublicToken(),
         shareToken: generatePublicToken(),
       },
-    });
-
-    await tx.activationCode.update({
-      where: { id: activationCode.id },
-      data: { used: true, usedAt: new Date(), schoolId: school.id },
     });
 
     return tx.user.create({

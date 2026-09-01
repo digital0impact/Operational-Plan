@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
+import { isPaidPlan } from "@/lib/subscription";
 import { TopBar } from "@/components/top-bar";
 
 // كل صفحة تحت هذا التخطيط مرتبطة بجلسة مستخدم ومدرسة محدَّدة — لا فائدة
@@ -26,6 +27,7 @@ export default async function AppLayout({
         schoolName={user.school.name}
         userName={user.name}
         role={user.role}
+        isPaid={isPaidPlan(user.school)}
       />
       <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
     </div>

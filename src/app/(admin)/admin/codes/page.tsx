@@ -14,9 +14,10 @@ export default async function AdminCodesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-ink">رموز التفعيل</h1>
+        <h1 className="text-2xl font-extrabold text-ink">رموز الاشتراك</h1>
         <p className="mt-1 text-muted">
-          أصدر رموز تفعيل جديدة لتوزيعها على المدارس لإنشاء حساباتها.
+          أصدر رموز اشتراك لإرسالها للمدارس عند الشراء من المتجر، لترقية
+          حساباتها القائمة إلى خطة مدفوعة.
         </p>
       </div>
 
@@ -38,6 +39,7 @@ export default async function AdminCodesPage() {
               <thead>
                 <tr className="border-b border-border text-right text-xs text-muted">
                   <th className="py-2 pl-2">الرمز</th>
+                  <th className="py-2 pl-2">المدة</th>
                   <th className="py-2 pl-2">الحالة</th>
                   <th className="py-2 pl-2">ملاحظة</th>
                   <th className="py-2 pl-2">المدرسة</th>
@@ -50,6 +52,9 @@ export default async function AdminCodesPage() {
                   <tr key={code.id} className="border-b border-border last:border-0">
                     <td className="py-2.5 pl-2 font-mono text-xs text-ink" dir="ltr">
                       {code.code}
+                    </td>
+                    <td className="py-2.5 pl-2 text-muted">
+                      {code.durationMonths === 6 ? "نصف سنوي" : `${code.durationMonths} شهرًا`}
                     </td>
                     <td className="py-2.5 pl-2">
                       <span

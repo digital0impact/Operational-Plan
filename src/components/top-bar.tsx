@@ -6,10 +6,12 @@ export function TopBar({
   schoolName,
   userName,
   role,
+  isPaid,
 }: {
   schoolName: string;
   userName: string;
   role: string;
+  isPaid?: boolean;
 }) {
   return (
     <header className="border-b border-border bg-surface">
@@ -29,6 +31,14 @@ export function TopBar({
             </Link>
             <Link href="/visits" className="text-ink hover:text-accent">
               الزيارات الصفية
+            </Link>
+            <Link href="/subscription" className="flex items-center gap-1.5 text-ink hover:text-accent">
+              الاشتراك
+              {!isPaid ? (
+                <span className="rounded-full bg-amber-soft px-2 py-0.5 text-xs font-semibold text-amber">
+                  مجاني
+                </span>
+              ) : null}
             </Link>
           </nav>
         </div>

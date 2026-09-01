@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCompletedSteps } from "@/lib/wizard-data";
 import { getEvaluationSummary } from "@/lib/public-data";
 import { getSchoolPlans } from "@/lib/plan-data";
+import { isPaidPlan } from "@/lib/subscription";
 import { CopyLink } from "@/components/copy-link";
 import {
   TOTAL_WIZARD_STEPS,
@@ -20,6 +21,7 @@ export const metadata: Metadata = { title: "الرئيسية" };
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   const school = user!.school!;
+  const paid = isPaidPlan(school);
 
   const [completedSteps, totalVotes, evaluations, evalSummary, otherPlans] = await Promise.all([
     getCompletedSteps(school.id),
@@ -120,12 +122,21 @@ export default async function DashboardPage() {
                 تحرير
               </Link>
               {completedCount > 0 ? (
-                <a
-                  href="/export"
-                  className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
-                >
-                  تصدير PDF
-                </a>
+                paid ? (
+                  <a
+                    href="/export"
+                    className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
+                  >
+                    تصدير PDF
+                  </a>
+                ) : (
+                  <Link
+                    href="/subscription?upgrade=export"
+                    className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent"
+                  >
+                    🔒 تصدير PDF
+                  </Link>
+                )
               ) : null}
             </div>
           </li>
@@ -175,12 +186,21 @@ export default async function DashboardPage() {
                   </Link>
                 ) : null}
                 {plan.completedSections > 0 ? (
-                  <a
-                    href={`/plans/${plan.id}/export`}
-                    className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
-                  >
-                    تصدير PDF
-                  </a>
+                  paid ? (
+                    <a
+                      href={`/plans/${plan.id}/export`}
+                      className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
+                    >
+                      تصدير PDF
+                    </a>
+                  ) : (
+                    <Link
+                      href="/subscription?upgrade=export"
+                      className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent"
+                    >
+                      🔒 تصدير PDF
+                    </Link>
+                  )
                 ) : null}
               </div>
             </li>
@@ -202,10 +222,24 @@ export default async function DashboardPage() {
             شارك هذه الروابط مع المعلمين لتصويتهم على المبادرات والبرامج، ومع
             المشرف التربوي أو أولياء الأمور للاطلاع على الخطة وتقييمها.
           </p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <CopyLink path={`/vote/${school.voteToken}`} label={`رابط التصويت (${totalVotes} صوت)`} />
-            <CopyLink path={`/share/${school.shareToken}`} label="رابط المشاركة والتقييم" />
-          </div>
+          {paid ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <CopyLink path={`/vote/${school.voteToken}`} label={`رابط التصويت (${totalVotes} صوت)`} />
+              <CopyLink path={`/share/${school.shareToken}`} label="رابط المشاركة والتقييم" />
+            </div>
+          ) : (
+            <div className="mt-4 rounded-lg border border-dashed border-border bg-surface-2 p-4 text-center">
+              <p className="text-sm text-ink">
+                🔒 الروابط العامة متاحة فقط في الخطط المدفوعة
+              </p>
+              <Link
+                href="/subscription"
+                className="mt-2 inline-block text-sm font-semibold text-accent hover:underline"
+              >
+                الترقية إلى خطة مدفوعة ←
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 border-t border-border pt-6">

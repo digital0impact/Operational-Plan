@@ -280,8 +280,8 @@ export default async function Home() {
         <section className="mx-auto max-w-5xl px-4 py-16 text-center">
           <h2 className="text-2xl font-extrabold text-ink">جاهز تبدأ؟</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-            احصل على رمز التفعيل من متجر معين وسيتم إرساله لك عند الاشتراك،
-            وابدأ إعداد خططك خلال دقائق.
+            سجّل مدرستك مجانًا وابدأ إعداد خططك خلال دقائق — وارتقِ لاحقًا
+            إلى خطة مدفوعة برمز اشتراك يصلك من متجر معين عند الاشتراك.
           </p>
           <div className="mt-6">
             <Link

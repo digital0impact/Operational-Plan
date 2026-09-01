@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import type { AiResult } from "@/lib/ai/generate";
 
 /**
@@ -22,7 +23,9 @@ export function AiSuggestButton<T>({
   onResult: (data: T) => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; isPaywall: boolean } | null>(
+    null
+  );
 
   return (
     <div className="flex flex-col gap-1">
@@ -36,7 +39,7 @@ export function AiSuggestButton<T>({
             if (result.ok) {
               onResult(result.data);
             } else {
-              setError(result.error);
+              setError({ message: result.error, isPaywall: result.code === "PAYWALL" });
             }
           });
         }}
@@ -45,7 +48,19 @@ export function AiSuggestButton<T>({
         <span aria-hidden="true">✨</span>
         {pending ? pendingLabel : label}
       </button>
-      {error ? <p className="text-xs text-danger">{error}</p> : null}
+      {error ? (
+        <p className="text-xs text-danger">
+          {error.message}
+          {error.isPaywall ? (
+            <>
+              {" "}
+              <Link href="/subscription" className="font-semibold underline">
+                الترقية من هنا ←
+              </Link>
+            </>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }

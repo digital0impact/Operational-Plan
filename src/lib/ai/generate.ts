@@ -4,7 +4,9 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { AI_MODEL, getAiClient } from "@/lib/ai/client";
 
-export type AiResult<T> = { ok: true; data: T } | { ok: false; error: string };
+export type AiResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string; code?: "PAYWALL" };
 
 const NOT_CONFIGURED_ERROR =
   "ميزة الاقتراح بالذكاء الاصطناعي غير مفعّلة على هذا الخادم (لم يُضبط متغيّر البيئة ANTHROPIC_API_KEY).";

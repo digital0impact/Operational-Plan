@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { TOTAL_WIZARD_STEPS } from "@/lib/constants";
+import { isPaidPlan } from "@/lib/subscription";
 
 export async function getAdminOverview() {
   const [schools, stepCounts, activationCodes, voteCount, evaluations] =
@@ -12,6 +13,8 @@ export async function getAdminOverview() {
           unit: true,
           schoolSystem: true,
           createdAt: true,
+          subscriptionTier: true,
+          subscriptionExpiresAt: true,
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -36,6 +39,7 @@ export async function getAdminOverview() {
       ...school,
       completedSteps: completed,
       progressPercent: Math.round((completed / TOTAL_WIZARD_STEPS) * 100),
+      isPaid: isPaidPlan(school),
     };
   });
 

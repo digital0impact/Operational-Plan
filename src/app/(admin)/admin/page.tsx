@@ -33,7 +33,7 @@ export default async function AdminOverviewPage() {
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="عدد المدارس" value={stats.totalSchools} />
         <StatCard
-          label="رموز التفعيل"
+          label="رموز الاشتراك"
           value={`${stats.usedCodes} / ${stats.totalCodes}`}
         />
         <StatCard label="متوسط الإنجاز" value={`${stats.avgProgress}%`} />
@@ -54,14 +54,12 @@ export default async function AdminOverviewPage() {
             href="/admin/codes"
             className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:opacity-90"
           >
-            إصدار رموز تفعيل
+            إصدار رموز اشتراك
           </Link>
         </div>
 
         {schools.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">
-            لا توجد مدارس مسجَّلة بعد — أصدر رمز تفعيل لبدء أول تسجيل.
-          </p>
+          <p className="mt-4 text-sm text-muted">لا توجد مدارس مسجَّلة بعد.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full border-collapse text-sm">
@@ -71,6 +69,7 @@ export default async function AdminOverviewPage() {
                   <th className="py-2 pl-2">المرحلة</th>
                   <th className="py-2 pl-2">التصنيف</th>
                   <th className="py-2 pl-2">الإنجاز</th>
+                  <th className="py-2 pl-2">الاشتراك</th>
                   <th className="py-2">تاريخ التسجيل</th>
                 </tr>
               </thead>
@@ -101,6 +100,18 @@ export default async function AdminOverviewPage() {
                         }
                       >
                         {school.progressPercent}%
+                      </span>
+                    </td>
+                    <td className="py-2.5 pl-2">
+                      <span
+                        className={
+                          "rounded-full px-2 py-0.5 text-xs font-semibold " +
+                          (school.isPaid
+                            ? "bg-accent-soft text-accent"
+                            : "bg-surface-2 text-muted")
+                        }
+                      >
+                        {school.isPaid ? "مدفوعة" : "مجانية"}
                       </span>
                     </td>
                     <td className="py-2.5 font-mono text-xs text-muted">

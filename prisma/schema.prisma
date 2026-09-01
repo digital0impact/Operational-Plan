@@ -18,9 +18,20 @@ datasource db {
   provider = "postgresql"
 }
 
-/// مدرسة (Tenant) — تُنشأ عبر رمز تفعيل صادر من الإدارة العامة للتعليم
+/// مستوى اشتراك المدرسة: مجاني (تصفح وإعداد الخطط) أو مدفوع (يضيف التصدير
+/// PDF واقتراحات الذكاء الاصطناعي والروابط العامة)
+enum SubscriptionTier {
+  FREE
+  PAID
+}
+
+/// مدرسة (Tenant) — تُنشأ بتسجيل حر، وتُرقَّى إلى خطة مدفوعة عبر رمز اشتراك
 model School {
   id String @id @default(cuid())
+
+  // الاشتراك
+  subscriptionTier      SubscriptionTier @default(FREE)
+  subscriptionExpiresAt DateTime? // null على الخطة المجانية أو خطة مدفوعة بلا انتهاء
 
   // بيانات المدرسة (النموذج الرسمي، صفحة 2)
   name                 String
@@ -55,7 +66,7 @@ model School {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  activationCode   ActivationCode?
+  activationCodes  ActivationCode[]
   users            User[]
   procedureInputs  ProcedureInput[]
   stepProgress     WizardStepProgress[]
@@ -82,16 +93,19 @@ model WizardStepProgress {
   @@map("wizard_step_progress")
 }
 
-/// رمز تفعيل تصدره الإدارة العامة للتعليم لمدرسة واحدة (SCH-XXXX-XXXX)
+/// رمز اشتراك (SCH-XXXX-XXXX) يُصدره المشرف العام عند شراء مدرسة اشتراكًا
+/// (عبر المتجر الخارجي)، وتُدخله المدرسة من صفحة الاشتراك لترقية حسابها
+/// إلى خطة مدفوعة لمدة durationMonths. لا علاقة له بالتسجيل — التسجيل حر.
 model ActivationCode {
-  id        String    @id @default(cuid())
-  code      String    @unique
-  used      Boolean   @default(false)
-  issuedFor String? // ملاحظة اختيارية: اسم المدرسة المستهدفة أو الإدارة
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  id             String    @id @default(cuid())
+  code           String    @unique
+  durationMonths Int       @default(12) // مدة الترقية عند الاستخدام: 6 أو 12 شهرًا
+  used           Boolean   @default(false)
+  issuedFor      String? // ملاحظة اختيارية: اسم المدرسة المستهدفة أو الإدارة
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
 
-  schoolId String? @unique
+  schoolId String? // بلا @unique: قد تُرقّي المدرسة اشتراكها أكثر من مرة عبر الزمن
   school   School? @relation(fields: [schoolId], references: [id])
 
   @@map("activation_codes")

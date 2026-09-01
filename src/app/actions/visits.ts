@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireSchoolId } from "@/lib/auth-guards";
 import { generatePublicToken } from "@/lib/tokens";
+import { isSchoolPaid, PAYWALL_MESSAGE } from "@/lib/subscription";
 import type { ActionState } from "@/app/actions/auth";
 
 const optionalText = (max: number) =>
@@ -30,6 +31,9 @@ export async function scheduleVisitAction(
   formData: FormData
 ): Promise<ActionState> {
   const schoolId = await requireSchoolId();
+  if (!(await isSchoolPaid(schoolId))) {
+    return { error: PAYWALL_MESSAGE };
+  }
 
   const parsed = scheduleVisitSchema.safeParse({
     teacherName: formData.get("teacherName"),

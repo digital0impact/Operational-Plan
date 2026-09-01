@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSchoolByShareToken } from "@/lib/public-data";
+import { isPaidPlan } from "@/lib/subscription";
 import { renderSchoolPlanPdf } from "@/lib/pdf/render";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,11 @@ export async function GET(
   const school = await getSchoolByShareToken(token);
   if (!school) {
     return new NextResponse("رابط غير صالح", { status: 404 });
+  }
+  if (!isPaidPlan(school)) {
+    return new NextResponse("تحميل الخطة كملف PDF غير متاح لهذه المدرسة حاليًا.", {
+      status: 402,
+    });
   }
 
   const pdf = await renderSchoolPlanPdf(school.id);
