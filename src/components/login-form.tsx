@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { loginAction, type ActionState } from "@/app/actions/auth";
 import { Field, TextInput, ErrorNotice } from "@/components/form-controls";
 import { SubmitButton } from "@/components/submit-button";
@@ -23,9 +24,17 @@ export function LoginForm() {
         />
       </Field>
 
-      <Field label="كلمة المرور">
-        <TextInput type="password" name="password" required />
-      </Field>
+      <div>
+        <Field label="كلمة المرور">
+          <TextInput type="password" name="password" required />
+        </Field>
+        <Link
+          href="/forgot-password"
+          className="mt-1.5 inline-block text-xs font-semibold text-accent hover:underline"
+        >
+          نسيت كلمة المرور؟
+        </Link>
+      </div>
 
       <ErrorNotice message={state.error} />
 

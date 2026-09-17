@@ -130,3 +130,52 @@ export async function logoutAction() {
   await destroySession();
   redirect("/login");
 }
+
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "كلمة المرور 8 أحرف على الأقل"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "كلمتا المرور غير متطابقتين",
+    path: ["confirmPassword"],
+  });
+
+/**
+ * إعادة تعيين كلمة المرور عبر رابط صادر من لوحة الإدارة العامة (لا تسجيل
+ * دخول). يتحقّق أن الرمز صالح، غير مُستخدَم، ولم تمضِ مدته (24 ساعة).
+ */
+export async function resetPasswordAction(
+  token: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const resetToken = await prisma.passwordResetToken.findUnique({ where: { token } });
+
+  if (!resetToken || resetToken.usedAt || resetToken.expiresAt.getTime() < Date.now()) {
+    return { error: "رابط إعادة التعيين غير صالح أو منتهي الصلاحية" };
+  }
+
+  const parsed = resetPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+  }
+
+  const passwordHash = await hashPassword(parsed.data.password);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { usedAt: new Date() },
+    }),
+  ]);
+
+  redirect("/login?reset=1");
+}

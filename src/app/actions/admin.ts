@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-guards";
-import { generateActivationCode } from "@/lib/tokens";
+import { generateActivationCode, generatePublicToken } from "@/lib/tokens";
 import type { ActionState } from "@/app/actions/auth";
 
 const generateCodesSchema = z.object({
@@ -81,4 +81,33 @@ export async function deleteActivationCodeAction(id: string): Promise<void> {
   await requireAdmin();
   await prisma.activationCode.deleteMany({ where: { id, used: false } });
   redirect("/admin/codes");
+}
+
+/**
+ * المشرف العام يُصدر رابط إعادة تعيين كلمة مرور لمستخدم بعد التحقّق من
+ * هويته خارج المنصة (هاتف/بريد معروف مسبقًا)، ثم يُسلَّم الرابط له بنفس
+ * تلك القناة يدويًا — لا يوجد إرسال بريد تلقائي. الرابط صالح 24 ساعة
+ * ولاستخدام واحد فقط.
+ */
+export async function generatePasswordResetAction(
+  schoolId: string,
+  userId: string
+): Promise<void> {
+  await requireAdmin();
+
+  const user = await prisma.user.findFirst({ where: { id: userId, schoolId } });
+  if (!user) redirect(`/admin/schools/${schoolId}`);
+
+  const token = generatePublicToken();
+  await prisma.passwordResetToken.create({
+    data: {
+      token,
+      userId,
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+    },
+  });
+
+  redirect(
+    `/admin/schools/${schoolId}?resetToken=${token}&resetUser=${encodeURIComponent(user.name)}`
+  );
 }

@@ -158,9 +158,27 @@ model User {
   schoolId String?
   school   School? @relation(fields: [schoolId], references: [id])
 
-  sessions Session[]
+  sessions             Session[]
+  passwordResetTokens  PasswordResetToken[]
 
   @@map("users")
+}
+
+/// رمز إعادة تعيين كلمة مرور — يُصدره المشرف العام يدويًا من لوحة إدارة
+/// المدرسة بعد التحقّق من هوية صاحب الحساب خارج المنصة (هاتف/بريد معروف
+/// مسبقًا)، ثم يُسلَّم الرابط للمستخدم بنفس تلك القناة. صالح 24 ساعة
+/// ولاستخدام واحد فقط.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 /// جلسة دخول (كوكي بالتوكن)
