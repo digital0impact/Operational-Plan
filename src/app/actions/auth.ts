@@ -6,6 +6,9 @@ import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createSession, destroySession } from "@/lib/session";
 import { generatePublicToken } from "@/lib/tokens";
+import { isEmailConfigured } from "@/lib/email/client";
+import { sendPasswordResetEmail } from "@/lib/email/send";
+import { getBaseUrl } from "@/lib/site-url";
 import {
   SCHOOL_CLASSIFICATION_OPTIONS,
   SCHOOL_GENDER_OPTIONS,
@@ -131,6 +134,49 @@ export async function logoutAction() {
   redirect("/login");
 }
 
+const forgotPasswordSchema = z.object({
+  email: z.email("بريد إلكتروني غير صحيح"),
+});
+
+/**
+ * طلب إعادة تعيين كلمة مرور ذاتيًا عبر البريد الإلكتروني. لا يكشف أبدًا
+ * إن كان البريد مسجَّلًا أم لا (يُعيد نفس رسالة النجاح في الحالتين) لمنع
+ * استكشاف الحسابات — الاستثناء الوحيد هو عدم ضبط خدمة البريد على
+ * الخادم، حيث يُعرض ذلك صراحةً مع توجيه لمسار الإدارة العامة البديل.
+ */
+export async function requestPasswordResetAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بريد إلكتروني غير صحيح" };
+  }
+
+  if (!isEmailConfigured()) {
+    return {
+      error:
+        "خدمة البريد الإلكتروني غير مفعّلة على الخادم حاليًا — تواصل مع الإدارة العامة للتعليم لإعادة تعيين كلمة المرور يدويًا.",
+    };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+  if (user) {
+    const token = generatePublicToken();
+    await prisma.passwordResetToken.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      },
+    });
+    const baseUrl = await getBaseUrl();
+    await sendPasswordResetEmail(user.email, `${baseUrl}/reset-password/${token}`);
+  }
+
+  redirect("/forgot-password?sent=1");
+}
+
 const resetPasswordSchema = z
   .object({
     password: z.string().min(8, "كلمة المرور 8 أحرف على الأقل"),
@@ -142,8 +188,10 @@ const resetPasswordSchema = z
   });
 
 /**
- * إعادة تعيين كلمة المرور عبر رابط صادر من لوحة الإدارة العامة (لا تسجيل
- * دخول). يتحقّق أن الرمز صالح، غير مُستخدَم، ولم تمضِ مدته (24 ساعة).
+ * إعادة تعيين كلمة المرور عبر رابط — سواء وصل بالبريد الإلكتروني
+ * (requestPasswordResetAction) أو صادر يدويًا من لوحة الإدارة العامة
+ * (generatePasswordResetAction). لا تسجيل دخول مطلوب؛ يتحقّق أن الرمز
+ * صالح، غير مُستخدَم، ولم تمضِ مدته (24 ساعة).
  */
 export async function resetPasswordAction(
   token: string,
